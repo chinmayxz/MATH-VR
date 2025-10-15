@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Lab VR - Trivia Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="space-bg">
+    <!-- Audio element for background music -->
+    <audio id="bgMusic" loop>
+        <source src="https://assets.codepen.io/1468070/space-ambience.mp3" type="audio/mpeg">
+    </audio>
+    
+    <div class="container">
+        <header>
+            <h1>Math Lab VR</h1>
+            <p class="tagline">Test your math skills in immersive environments!</p>
+        </header>
+        
+        <!-- Main Menu -->
+        <div class="main-menu" id="mainMenu">
+            <button class="menu-btn" id="startGameBtn">Start Game</button>
+            <button class="menu-btn" id="leaderboardBtn">Leaderboard</button>
+            <button class="menu-btn" id="settingsBtn">Settings</button>
+        </div>
+        
+        <!-- Game Screen -->
+        <div class="game-screen" id="gameScreen">
+            <div class="question-container">
+                <h2 class="question" id="questionText">What is 5 + 7?</h2>
+            </div>
+            <div class="options" id="optionsContainer">
+                <button class="option-btn">10</button>
+                <button class="option-btn">11</button>
+                <button class="option-btn">12</button>
+                <button class="option-btn">13</button>
+            </div>
+            <div class="game-info">
+                <div class="score">Score: <span id="scoreValue">0</span></div>
+                <div class="timer">Time: <span id="timerValue">60</span>s</div>
+            </div>
+            <button class="menu-btn" id="backToMenuBtn">Back to Menu</button>
+        </div>
+        
+        <!-- Settings Screen -->
+        <div class="settings-screen" id="settingsScreen">
+            <h2>Settings</h2>
+            
+            <div class="settings-option">
+                <label for="backgroundSelect">Background Theme:</label>
+                <select id="backgroundSelect">
+                    <option value="space">Space</option>
+                    <option value="beach">Beach</option>
+                    <option value="living-room">Living Room</option>
+                    <option value="lecture-hall">Lecture Hall</option>
+                    <option value="movie-theatre">Movie Theatre</option>
+                    <option value="nature">Nature</option>
+                </select>
+            </div>
+            
+            <div class="settings-option">
+                <label for="mathTopicSelect">Math Topic:</label>
+                <select id="mathTopicSelect">
+                    <option value="general">General Math</option>
+                    <option value="vedic">Vedic Math</option>
+                    <option value="algebra">Algebra</option>
+                    <option value="geometry">Geometry</option>
+                </select>
+            </div>
+            
+            <div class="settings-option">
+                <label for="musicToggle">Background Music:</label>
+                <button id="musicToggle">Mute</button>
+            </div>
+            
+            <button class="menu-btn" id="saveSettingsBtn">Save Settings</button>
+            <button class="menu-btn" id="backToMenuFromSettingsBtn">Back to Menu</button>
+        </div>
+        
+        <!-- Leaderboard Screen -->
+        <div class="leaderboard-screen" id="leaderboardScreen">
+            <h2>Leaderboard</h2>
+            <div class="leaderboard-list" id="leaderboardList">
+                <!-- Leaderboard items will be generated here -->
+            </div>
+            <button class="menu-btn" id="backToMenuFromLeaderboardBtn">Back to Menu</button>
+        </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls">
+        <button class="control-btn" id="musicControlBtn">🔊</button>
+        <button class="control-btn" id="settingsControlBtn">⚙️</button>
+    </div>
+    
+    <!-- Whiteboard Button -->
+    <button class="whiteboard-btn" id="whiteboardBtn">✏️</button>
+    
+    <!-- Whiteboard -->
+    <div class="whiteboard" id="whiteboard">
+        <div class="whiteboard-content">
+            <div class="whiteboard-header">
+                <h3>Whiteboard</h3>
+                <button class="close-btn" id="closeWhiteboardBtn">✕</button>
+            </div>
+            <canvas class="whiteboard-canvas" id="whiteboardCanvas"></canvas>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
