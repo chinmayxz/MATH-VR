@@ -1,89 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Simple Math VR Trivia</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math Trivia VR - Boulder Scene</title>
 
-  <!-- A-Frame for 3D/VR -->
+  <!-- A-Frame (for 3D and VR) -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
-  <!-- App JavaScript -->
-  <script defer src="app.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css" />
+    /* Trivia popup floating box */
+    #trivia-popup {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 330px;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    #question {
+      font-weight: bold;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .option {
+      display: block;
+      background: #e0e0e0;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+
+    .option:hover {
+      background: #d1d1d1;
+    }
+
+    .correct {
+      background-color: #b6f7b0 !important;
+    }
+
+    .wrong {
+      background-color: #ffb3b3 !important;
+    }
+
+    /* VR button */
+    #vr-btn {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: #0078d7;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      transition: background 0.3s;
+    }
+
+    #vr-btn:hover {
+      background: #005fa3;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- ---------------------
-       2D UI (overlay)
-       --------------------- -->
-  <div id="ui">
-    <h1>Math Trivia — Boulder View</h1>
-    <p class="small">Mental math multiple choice. Guess until correct.</p>
+  <!-- A-Frame Scene -->
+  <a-scene>
+    <!-- Boulder background wallpaper -->
+    <a-sky src="https://cdn.wallpapersafari.com/85/92/sKSiJu.jpg" rotation="0 -130 0"></a-sky>
 
-    <div class="controls-row">
-      <button id="prevBtn" class="nav">⬅ Back</button>
-      <button id="nextBtn" class="nav">Next ➡</button>
-    </div>
+    <!-- Ground -->
+    <a-plane position="0 -1 0" rotation="-90 0 0" width="50" height="50" color="#7cfc00"></a-plane>
 
-    <div class="vr-row">
-      <button id="enterVrBtn">Enter VR</button>
-      <button id="exitVrBtn">Exit VR</button>
-    </div>
-  </div>
-
-  <!-- ---------------------
-       Popup (question panel) - not full screen
-       --------------------- -->
-  <div id="popup" role="dialog" aria-live="polite">
-    <div id="popupHeader">
-      <strong>Question <span id="qIndex">0</span> / <span id="qTotal">0</span></strong>
-      <button id="closePopup" title="Close">✕</button>
-    </div>
-
-    <div id="popupBody">
-      <div id="questionText">Loading question...</div>
-
-      <div id="options">
-        <!-- Buttons for options will be inserted here by JS -->
-      </div>
-
-      <div id="feedback" aria-hidden="true">
-        <!-- Will show red X or green check -->
-      </div>
-    </div>
-
-    <div id="popupFooter">
-      <button id="backArrow" class="arrow">◀</button>
-      <button id="forwardArrow" class="arrow">▶</button>
-    </div>
-  </div>
-
-  <!-- ---------------------
-       A-FRAME SCENE (3D background)
-       --------------------- -->
-  <a-scene id="scene" embedded>
-
-    <!-- sky using the Boulder wallpaper url (user provided link). If it fails, color fallback is used -->
-    <a-sky id="sky" src="https://wallpapersafari.com/w/6m2Ywz" rotation="0 0 0" color="#88ccff"></a-sky>
-
-    <!-- simple ground / horizon -->
-    <a-plane rotation="-90 0 0" width="100" height="100" color="#5C6B4E" position="0 -1 -5"></a-plane>
-
-    <!-- some simple 3D objects to give depth -->
-    <a-cone position="-3 0 -15" radius-bottom="4" height="8" color="#4A3723"></a-cone>
-    <a-cone position="3 0 -18" radius-bottom="5" height="10" color="#6B4F3B"></a-cone>
-
-    <!-- camera rig for WASD + look controls (so user can walk with keyboard/joystick) -->
-    <a-entity id="rig" position="0 1.6 0">
-      <a-camera wasd-controls look-controls></a-camera>
-    </a-entity>
-
+    <!-- Camera (so user can look around in VR) -->
+    <a-entity camera look-controls position="0 1.6 0"></a-entity>
   </a-scene>
 
-  <!-- small info text bottom-right -->
-  <div id="hint">Tip: Use WASD or joystick to move. Click the popup to answer.</div>
+  <!-- Trivia popup -->
+  <div id="trivia-popup">
+    <div id="question">Loading question...</div>
+    <div id="options"></div>
+  </div>
 
+  <!-- VR Mode Button -->
+  <button id="vr-btn" onclick="enterVR()">Enter VR Mode</button>
+
+  <script>
+    // ============================
+    // SIMPLE MATH TRIVIA GAME
+    // ============================
+
+    const triviaData = [
+      { question: "What is 7 + 6?", options: ["11", "13", "14", "12"], answer: "13" },
+      { question: "What is 9 × 8?", options: ["72", "81", "64", "70"], answer: "72" },
+      { question: "What is 15 ÷ 3?", options: ["4", "5", "6", "3"], answer: "5" },
+      { question: "What is 12 - 7?", options: ["4", "3", "5", "6"], answer: "5" },
+      { question: "What is 6 × 7?", options: ["42", "49", "36", "40"], answer: "42" },
+      { question: "What is 10 + 14?", options: ["24", "25", "22", "23"], answer: "24" },
+      { question: "What is 8 × 5?", options: ["35", "40", "45", "50"], answer: "40" },
+      { question: "What is 100 ÷ 4?", options: ["20", "25", "30", "40"], answer: "25" },
+      { question: "What is 3 × 9?", options: ["27", "24", "30", "21"], answer: "27" },
+      { question: "What is 18 - 9?", options: ["8", "7", "10", "9"], answer: "9" }
+    ];
+
+    let currentQuestion = 0;
+
+    function loadQuestion(index) {
+      const q = triviaData[index];
+      const questionDiv = document.getElementById("question");
+      const optionsDiv = document.getElementById("options");
+
+      questionDiv.textContent = q.question;
+      optionsDiv.innerHTML = "";
+
+      q.options.forEach(opt => {
+        const btn = document.createElement("div");
+        btn.classList.add("option");
+        btn.textContent = opt;
+
+        btn.addEventListener("click", () => {
+          if (opt === q.answer) {
+            btn.classList.add("correct");
+            setTimeout(() => {
+              nextQuestion();
+            }, 800);
+          } else {
+            btn.classList.add("wrong");
+            setTimeout(() => btn.classList.remove("wrong"), 600);
+          }
+        });
+
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+      if (currentQuestion >= triviaData.length) currentQuestion = 0;
+      loadQuestion(currentQuestion);
+    }
+
+    // Load first question
+    loadQuestion(currentQuestion);
+
+    // Enter VR mode (with popup visible)
+    function enterVR() {
+      const scene = document.querySelector("a-scene");
+      scene.enterVR();
+    }
+  </script>
 </body>
 </html>
