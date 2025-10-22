@@ -1,7 +1,135 @@
+/* ---------- Basic page layout ---------- */
 html, body {
-  margin: 0;
   height: 100%;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #000; /* behind the scene */
+  color: #fff;
+}
+
+/* UI overlay top-left */
+#ui {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 20;
+  width: 300px;
+  background: rgba(0,0,0,0.55);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+#ui h1 { margin: 0 0 6px 0; font-size: 18px; }
+#ui .small { margin: 0 0 10px 0; font-size: 12px; color: #ddd; }
+
+.controls-row { display:flex; gap:8px; margin-bottom:8px; }
+.controls-row .nav { flex:1; padding:8px 6px; }
+
+/* VR buttons */
+.vr-row { display:flex; gap:8px; margin-bottom:6px; }
+#enterVrBtn, #exitVrBtn {
+  padding: 8px;
+  width: 50%;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+#enterVrBtn { background: #2e7d32; color: white; }
+#exitVrBtn  { background: #b71c1c; color: white; }
+
+/* ---------- Popup (panel) ---------- */
+#popup {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  width: 420px;
+  max-width: calc(100% - 48px);
+  background: rgba(255,255,255,0.98);
+  color: #0b0b0b;
+  z-index: 30;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   overflow: hidden;
-  background-color: black;
-  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* header */
+#popupHeader {
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #1f2937;
+  color: white;
+}
+#popupHeader button { background: transparent; color: white; border: none; font-size: 16px; cursor: pointer; }
+
+/* body */
+#popupBody {
+  padding: 14px;
+  min-height: 140px;
+  background: #ffffff;
+  color: #111;
+}
+
+#questionText {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+/* option buttons */
+#options { display:flex; flex-direction: column; gap:8px; }
+.option-btn {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #f5f5f5;
+  cursor: pointer;
+  text-align: left;
+}
+.option-btn:hover { background: #eef2ff; }
+
+/* feedback */
+#feedback {
+  margin-top:12px;
+  min-height: 22px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* footer with arrows */
+#popupFooter {
+  display:flex;
+  justify-content:center;
+  gap: 20px;
+  padding: 8px 10px;
+  background: #fafafa;
+}
+.arrow {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #e2e8f0;
+  cursor: pointer;
+}
+
+/* small hint bottom-right */
+#hint {
+  position: absolute;
+  right: 18px;
+  bottom: 12px;
+  z-index: 15;
+  background: rgba(0,0,0,0.4);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #fff;
+}
+
+/* responsive adjustments */
+@media (max-width: 520px) {
+  #popup { width: 92%; right: 4%; left: 4%; bottom: 10px; }
+  #ui { width: 90%; left: 5%; top: 6px; }
 }
