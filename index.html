@@ -1,71 +1,89 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Math Explorer VR</title>
-    <meta name="description" content="Math Explorer VR - Interactive Math Lab">
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <link rel="stylesheet" href="style.css">
-  </head>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Simple Math VR Trivia</title>
 
-  <body>
-    <a-scene background="color: black" embedded>
-      
-      <!-- 🌌 Sky background (galaxy texture) -->
-      <a-sky src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg"></a-sky>
+  <!-- A-Frame for 3D/VR -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
-      <!-- 💡 Lighting -->
-      <a-entity light="type: ambient; color: #888"></a-entity>
-      <a-entity light="type: point; color: white; intensity: 2" position="0 3 3"></a-entity>
+  <!-- App JavaScript -->
+  <script defer src="app.js"></script>
 
-      <!-- 🧍 Camera + Cursor -->
-      <a-entity id="cameraRig" position="0 1.6 4">
-        <a-entity camera look-controls wasd-controls></a-entity>
-        <a-entity cursor="fuse: false" position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-                  material="color: white; shader: flat">
-        </a-entity>
-      </a-entity>
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-      <!-- 🌀 Title Text -->
-      <a-entity position="0 2.5 -3"
-                text="value: MATH EXPLORER VR; color: #00ffff; align: center; width: 6;">
-      </a-entity>
+  <!-- ---------------------
+       2D UI (overlay)
+       --------------------- -->
+  <div id="ui">
+    <h1>Math Trivia — Boulder View</h1>
+    <p class="small">Mental math multiple choice. Guess until correct.</p>
 
-      <!-- 🌟 Portals -->
-      <!-- Algebra -->
-      <a-entity id="algebraPortal" class="portal"
-                geometry="primitive: torus; radius: 0.8; radiusTubular: 0.1"
-                position="-2 1.3 -3"
-                rotation="0 0 0"
-                material="color: #ff4d4d; emissive: #ff4d4d; emissiveIntensity: 0.6">
-      </a-entity>
-      <a-entity text="value: Algebra; color: white; align: center; width: 3;"
-                position="-2 0.3 -3"></a-entity>
+    <div class="controls-row">
+      <button id="prevBtn" class="nav">⬅ Back</button>
+      <button id="nextBtn" class="nav">Next ➡</button>
+    </div>
 
-      <!-- Geometry -->
-      <a-entity id="geometryPortal" class="portal"
-                geometry="primitive: torus; radius: 0.8; radiusTubular: 0.1"
-                position="0 1.3 -3"
-                material="color: #4d79ff; emissive: #4d79ff; emissiveIntensity: 0.6">
-      </a-entity>
-      <a-entity text="value: Geometry; color: white; align: center; width: 3;"
-                position="0 0.3 -3"></a-entity>
+    <div class="vr-row">
+      <button id="enterVrBtn">Enter VR</button>
+      <button id="exitVrBtn">Exit VR</button>
+    </div>
+  </div>
 
-      <!-- Calculus -->
-      <a-entity id="calculusPortal" class="portal"
-                geometry="primitive: torus; radius: 0.8; radiusTubular: 0.1"
-                position="2 1.3 -3"
-                material="color: #33ff77; emissive: #33ff77; emissiveIntensity: 0.6">
-      </a-entity>
-      <a-entity text="value: Calculus; color: white; align: center; width: 3;"
-                position="2 0.3 -3"></a-entity>
+  <!-- ---------------------
+       Popup (question panel) - not full screen
+       --------------------- -->
+  <div id="popup" role="dialog" aria-live="polite">
+    <div id="popupHeader">
+      <strong>Question <span id="qIndex">0</span> / <span id="qTotal">0</span></strong>
+      <button id="closePopup" title="Close">✕</button>
+    </div>
 
-      <!-- Ground Grid -->
-      <a-grid position="0 0 -3" rotation="-90 0 0" color="#444" width="10" height="10"></a-grid>
-      
-      <!-- Link JavaScript -->
-      <script src="script.js"></script>
-    </a-scene>
-  </body>
+    <div id="popupBody">
+      <div id="questionText">Loading question...</div>
+
+      <div id="options">
+        <!-- Buttons for options will be inserted here by JS -->
+      </div>
+
+      <div id="feedback" aria-hidden="true">
+        <!-- Will show red X or green check -->
+      </div>
+    </div>
+
+    <div id="popupFooter">
+      <button id="backArrow" class="arrow">◀</button>
+      <button id="forwardArrow" class="arrow">▶</button>
+    </div>
+  </div>
+
+  <!-- ---------------------
+       A-FRAME SCENE (3D background)
+       --------------------- -->
+  <a-scene id="scene" embedded>
+
+    <!-- sky using the Boulder wallpaper url (user provided link). If it fails, color fallback is used -->
+    <a-sky id="sky" src="https://wallpapersafari.com/w/6m2Ywz" rotation="0 0 0" color="#88ccff"></a-sky>
+
+    <!-- simple ground / horizon -->
+    <a-plane rotation="-90 0 0" width="100" height="100" color="#5C6B4E" position="0 -1 -5"></a-plane>
+
+    <!-- some simple 3D objects to give depth -->
+    <a-cone position="-3 0 -15" radius-bottom="4" height="8" color="#4A3723"></a-cone>
+    <a-cone position="3 0 -18" radius-bottom="5" height="10" color="#6B4F3B"></a-cone>
+
+    <!-- camera rig for WASD + look controls (so user can walk with keyboard/joystick) -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-camera wasd-controls look-controls></a-camera>
+    </a-entity>
+
+  </a-scene>
+
+  <!-- small info text bottom-right -->
+  <div id="hint">Tip: Use WASD or joystick to move. Click the popup to answer.</div>
+
+</body>
 </html>
