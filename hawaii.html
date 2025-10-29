@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Hawaii World - Math IQ VR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <!-- particle system + (optional) extras -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-particle-system-component@1.0.0/dist/aframe-particle-system-component.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="hawaii.js"></script>
+</head>
+<body>
+  <a-scene>
+    <a-assets>
+      <audio id="waves" src="sounds/waves.mp3" preload="auto"></audio>
+    </a-assets>
+
+    <!-- Sky: color updated by JS based on device time -->
+    <a-sky id="sky" color="#87CEEB"></a-sky>
+
+    <!-- Simple water plane: uses subtle animation to simulate waves -->
+    <a-entity id="water"
+              geometry="primitive: plane; width: 100; height: 100"
+              rotation="-90 0 0"
+              position="0 0 0"
+              material="shader: standard; color: #1E90FF; metalness:0; roughness:0.8; opacity:0.95">
+    </a-entity>
+
+    <!-- A few low-cost "palm" placeholders using boxes/cones (you can replace with real models) -->
+    <a-cone position="-4 0 -6" radius-bottom="0.6" height="2.5" color="#2f2f2f"></a-cone>
+    <a-cylinder position="-4 1 -6" radius="0.1" height="1.8" color="#6b4226"></a-cylinder>
+
+    <a-cone position="4 0 -6" radius-bottom="0.6" height="2.5" color="#2f2f2f"></a-cone>
+    <a-cylinder position="4 1 -6" radius="0.1" height="1.8" color="#6b4226"></a-cylinder>
+
+    <!-- Galaxy particles in distance for style -->
+    <a-entity particle-system="preset: dust; particleCount: 600; color: #ffffff, #ffe4b5; size: 1" position="0 5 -20"></a-entity>
+
+    <!-- Resume Trivia button -->
+    <a-box id="triviaBtn" position="0 1.2 -3" width="2" height="0.8" depth="0.3"
+           color="#ff8800" text="value: Resume Trivia; align:center; color:white"></a-box>
+
+    <!-- VR Enter button (A-Frame default appears automatically).
+         We also show simple overlay HUD buttons (enter/exit). -->
+    <a-entity id="hud" position="0 2 -1">
+      <a-plane id="enterVR" position="-0.9 0.25 0" width="0.8" height="0.35" color="#00AAFF"
+               text="value: Enter VR; align:center; color:white"></a-plane>
+      <a-plane id="exitVR" position="0.9 0.25 0" width="0.8" height="0.35" color="#FF5555"
+               text="value: Exit VR; align:center; color:white"></a-plane>
+    </a-entity>
+
+    <!-- Camera with WASD + joystick support -->
+    <a-entity id="cameraRig" position="0 1.6 0">
+      <a-entity camera wasd-controls look-controls></a-entity>
+    </a-entity>
+  </a-scene>
+</body>
+</html>

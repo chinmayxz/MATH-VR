@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Math IQ Trivia - Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+  <!-- Firebase modules used as browser modules (replace version with the one you prefer) -->
+  <script type="module" src="trivia.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <a-scene>
+    <a-sky color="#001020"></a-sky>
+
+    <!-- Question and options (text inside boxes) -->
+    <a-entity id="question" position="0 2 -3" text="value: Loading...; color: #ffffff; width: 5;"></a-entity>
+
+    <a-box id="opt0" position="-1.8 1 -3" width="1.6" height="0.8" depth="0.3" color="#333"></a-box>
+    <a-box id="opt1" position="1.8 1 -3" width="1.6" height="0.8" depth="0.3" color="#333"></a-box>
+    <a-box id="opt2" position="-1.8 0 -3" width="1.6" height="0.8" depth="0.3" color="#333"></a-box>
+    <a-box id="opt3" position="1.8 0 -3" width="1.6" height="0.8" depth="0.3" color="#333"></a-box>
+
+    <a-entity id="scoreText" position="0 3 -3" text="value: Score: 0; color: yellow; width: 4;"></a-entity>
+
+    <!-- Buttons: Submit score (after round), Login -->
+    <a-box id="loginBtn" position="-1.5 -1 -2" width="1.4" height="0.6" depth="0.2" color="#4285f4"
+           text="value: Login (Google); align:center; color:white;"></a-box>
+
+    <a-box id="submitBtn" position="1.5 -1 -2" width="1.4" height="0.6" depth="0.2" color="#34a853"
+           text="value: Submit Score; align:center; color:white;"></a-box>
+
+    <!-- Back to world / exit -->
+    <a-box id="exitBtn" position="0 -1 -2" width="1.4" height="0.6" depth="0.2" color="#ff5555"
+           text="value: Exit to Worlds; align:center; color:white;"></a-box>
+
+    <a-entity camera wasd-controls look-controls position="0 1.6 0"></a-entity>
+  </a-scene>
+</body>
+</html>

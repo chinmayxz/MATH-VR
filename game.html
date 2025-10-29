@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math VR - Immersive Math Trivia Experience</title>
+  
+  <!-- A-Frame VR Library -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- A-Frame Environment Component for beautiful scenes -->
+  <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+  <!-- A-Frame Particle System -->
+  <script src="https://unpkg.com/aframe-particle-system-component@1.0.11/dist/aframe-particle-system-component.min.js"></script>
+  
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      color: white;
+      transition: opacity 0.5s;
+    }
+    
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .loading-text {
+      font-size: 32px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    #ui-overlay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      z-index: 100;
+      max-width: 350px;
+      backdrop-filter: blur(10px);
+    }
+    
+    #ui-overlay h2 {
+      margin: 0 0 15px 0;
+      font-size: 24px;
+      color: #4CAF50;
+    }
+    
+    #ui-overlay button {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: bold;
+    }
+    
+    #ui-overlay button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    #ui-overlay button:active {
+      transform: translateY(0);
+    }
+    
+    .env-button {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+    }
+    
+    #score-display {
+      font-size: 20px;
+      margin: 15px 0;
+      padding: 10px;
+      background: rgba(76, 175, 80, 0.3);
+      border-radius: 8px;
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    #instructions {
+      font-size: 14px;
+      margin-top: 15px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      line-height: 1.6;
+    }
+    
+    .hide {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-text">🧮 Math VR Loading...</div>
+    <div class="loading-spinner"></div>
+    <p style="margin-top: 20px; font-size: 16px;">Preparing your immersive math experience</p>
+  </div>
+
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+    <h2>🧮 Math VR Trivia</h2>
+    
+    <div id="score-display">
+      Score: <span id="score">0</span> | Streak: <span id="streak">0</span>
+    </div>
+    
+    <button onclick="game.startTrivia()" id="start-btn">🎮 Start Math Challenge</button>
+    <button onclick="game.nextQuestion()" id="next-btn" class="hide">➡️ Next Question</button>
+    
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid rgba(255,255,255,0.2);">
+    
+    <h3 style="margin: 10px 0; font-size: 18px;">🌍 Choose Environment</h3>
+    <button onclick="game.setEnvironment('boulder')" class="env-button">🏔️ Boulder Mountains</button>
+    <button onclick="game.setEnvironment('hawaii')" class="env-button">🏝️ Hawaii Beach</button>
+    <button onclick="game.setEnvironment('space')" class="env-button">🌌 Outer Space</button>
+    <button onclick="game.setEnvironment('forest')" class="env-button">🌲 Forest</button>
+    
+    <div id="instructions">
+      <strong>🎮 Controls:</strong><br>
+      • WASD or Arrow Keys: Move<br>
+      • Mouse/Drag: Look Around<br>
+      • Click on answers in VR world<br>
+      • Click VR button for headset mode
+    </div>
+  </div>
+
+  <!-- A-Frame VR Scene -->
+  <a-scene id="scene" background="color: #87CEEB" fog="type: linear; color: #87CEEB; near: 30; far: 100">
+    
+    <!-- Asset Management -->
+    <a-assets>
+      <img id="grid" src="https://cdn.aframe.io/a-painter/images/floor.jpg" crossorigin="anonymous">
+      <img id="sky-texture" src="https://cdn.aframe.io/360-image-gallery-boilerplate/img/sechelt.jpg" crossorigin="anonymous">
+    </a-assets>
+    
+    <!-- Environment (dynamically controlled) -->
+    <a-entity id="environment" 
+              environment="preset: default; dressingAmount: 50; ground: hills; groundTexture: walkernoise; groundColor: #3a4f41; groundColor2: #2a3f31; grid: none; gridColor: #ccc; playArea: 2; shadow: true; lighting: distant; lightPosition: 0 1 -0.2; fog: 0.7"
+              visible="false">
+    </a-entity>
+    
+    <!-- Custom Sky -->
+    <a-sky id="main-sky" color="#87CEEB"></a-sky>
+    
+    <!-- Ambient Lighting -->
+    <a-entity light="type: ambient; color: #FFF; intensity: 0.8"></a-entity>
+    <a-entity light="type: directional; color: #FFF; intensity: 0.5" position="1 1 0"></a-entity>
+    
+    <!-- Camera Rig with Movement -->
+    <a-entity id="rig" position="0 1.6 0">
+      <a-entity id="camera" camera look-controls wasd-controls="acceleration: 30; fly: false" position="0 0 0">
+        <!-- Cursor for interaction -->
+        <a-cursor 
+          id="cursor"
+          color="#4CAF50"
+          raycaster="objects: .clickable"
+          fuse="false"
+          fuseTimeout="1500">
+        </a-cursor>
+      </a-entity>
+    </a-entity>
+    
+    <!-- 3D Floating Question Panel -->
+    <a-entity id="question-panel" position="0 2.5 -4" visible="false">
+      <!-- Background Panel -->
+      <a-plane 
+        width="5" 
+        height="3" 
+        color="#1a1a2e" 
+        opacity="0.95"
+        material="shader: flat">
+      </a-plane>
+      
+      <!-- Question Text -->
+      <a-text 
+        id="question-text" 
+        value="Click Start to Begin!"
+        align="center"
+        width="4.5"
+        position="0 1 0.01"
+        color="#ffffff"
+        wrap-count="35">
+      </a-text>
+      
+      <!-- Category Badge -->
+      <a-text 
+        id="category-text" 
+        value="Math Challenge"
+        align="center"
+        width="4"
+        position="0 1.3 0.01"
+        color="#4CAF50"
+        wrap-count="40">
+      </a-text>
+      
+      <!-- Answer Options (4 buttons) -->
+      <a-entity id="answers-container" position="0 -0.2 0">
+        <!-- Option A -->
+        <a-box 
+          id="option-0"
+          class="clickable answer-box"
+          position="-1.8 0.5 0.02"
+          width="1.6" 
+          height="0.6" 
+          depth="0.1"
+          color="#2196F3"
+          data-index="0">
+        </a-box>
+        <a-text 
+          id="option-text-0"
+          value="A"
+          align="center"
+          width="2.5"
+          position="-1.8 0.5 0.13"
+          color="#ffffff">
+        </a-text>
+        
+        <!-- Option B -->
+        <a-box 
+          id="option-1"
+          class="clickable answer-box"
+          position="0.2 0.5 0.02"
+          width="1.6" 
+          height="0.6" 
+          depth="0.1"
+          color="#2196F3"
+          data-index="1">
+        </a-box>
+        <a-text 
+          id="option-text-1"
+          value="B"
+          align="center"
+          width="2.5"
+          position="0.2 0.5 0.13"
+          color="#ffffff">
+        </a-text>
+        
+        <!-- Option C -->
+        <a-box 
+          id="option-2"
+          class="clickable answer-box"
+          position="-1.8 -0.3 0.02"
+          width="1.6" 
+          height="0.6" 
+          depth="0.1"
+          color="#2196F3"
+          data-index="2">
+        </a-box>
+        <a-text 
+          id="option-text-2"
+          value="C"
+          align="center"
+          width="2.5"
+          position="-1.8 -0.3 0.13"
+          color="#ffffff">
+        </a-text>
+        
+        <!-- Option D -->
+        <a-box 
+          id="option-3"
+          class="clickable answer-box"
+          position="0.2 -0.3 0.02"
+          width="1.6" 
+          height="0.6" 
+          depth="0.1"
+          color="#2196F3"
+          data-index="3">
+        </a-box>
+        <a-text 
+          id="option-text-3"
+          value="D"
+          align="center"
+          width="2.5"
+          position="0.2 -0.3 0.13"
+          color="#ffffff">
+        </a-text>
+      </a-entity>
+      
+      <!-- Score Display -->
+      <a-text 
+        id="vr-score"
+        value="Score: 0"
+        align="center"
+        width="3"
+        position="0 -1.2 0.01"
+        color="#FFD700">
+      </a-text>
+    </a-entity>
+    
+    <!-- Welcome Message -->
+    <a-entity id="welcome-panel" position="0 2 -3">
+      <a-plane width="4" height="2" color="#1a1a2e" opacity="0.9"></a-plane>
+      <a-text 
+        value="Welcome to Math VR!\n\nLook around and explore.\nClick 'Start Math Challenge' to begin.\n\nUse WASD to move around!"
+        align="center"
+        width="3.5"
+        position="0 0 0.01"
+        color="#ffffff"
+        wrap-count="30">
+      </a-text>
+    </a-entity>
+    
+    <!-- Decorative Elements -->
+    <a-entity id="particles" 
+              particle-system="preset: snow; particleCount: 1000; color: #ffffff; size: 0.5; opacity: 0.6"
+              position="0 5 -10"
+              visible="false">
+    </a-entity>
+    
+  </a-scene>
+
+  <!-- Game Logic -->
+  <script src="game.js"></script>
+
+</body>
+</html>
+
