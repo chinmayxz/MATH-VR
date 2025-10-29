@@ -27,9 +27,10 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 10000;
+      z-index: 20000;
       color: white;
       transition: opacity 0.5s;
+      pointer-events: auto;
     }
     
     #entrance-screen.hidden {
@@ -84,11 +85,12 @@
       padding: 40px;
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-      z-index: 1000;
+      z-index: 10000;
       max-width: 600px;
       width: 90%;
       color: white;
       display: none;
+      pointer-events: auto;
     }
     
     #question-popup.visible {
@@ -248,9 +250,10 @@
       align-items: center;
       cursor: pointer;
       box-shadow: 0 10px 30px rgba(76, 175, 80, 0.5);
-      z-index: 900;
+      z-index: 10000;
       transition: transform 0.3s;
       animation: bounce 2s infinite;
+      pointer-events: auto;
     }
     
     #question-icon:hover {
@@ -280,8 +283,9 @@
       color: white;
       padding: 15px 20px;
       border-radius: 10px;
-      z-index: 100;
+      z-index: 9000;
       font-size: 0.9rem;
+      pointer-events: auto;
     }
     
     #instructions h4 {
@@ -410,104 +414,6 @@
         </a-entity>
         
       </a-entity>
-    </a-entity>
-    
-    <!-- SINGLE 3D Popup for VR (matches desktop exactly, attached to camera rig) -->
-    <a-entity id="vr-popup" position="0 1.6 -2.5" rotation="0 0 0" visible="false">
-      <!-- Background -->
-      <a-plane width="3" height="2.5" color="#1e1e32" opacity="0.95" position="0 0 0"></a-plane>
-      
-      <!-- Title -->
-      <a-text value="Math Challenge" align="center" color="#4CAF50" width="2.5" position="0 1 0.01"></a-text>
-      
-      <!-- Score -->
-      <a-text id="vr-score-display" value="Score: 0 | Questions: 0/10" align="center" color="#4CAF50" width="2.5" position="0 0.8 0.01"></a-text>
-      
-      <!-- Category -->
-      <a-text id="vr-category" value="Loading..." align="center" color="#64B5F6" width="2.5" position="0 0.6 0.01"></a-text>
-      
-      <!-- Question -->
-      <a-text id="vr-question" value="Click Start to begin" align="center" color="#ffffff" width="2.5" wrap-count="35" position="0 0.3 0.01"></a-text>
-      
-      <!-- Answer A -->
-      <a-box 
-        id="vr-answer-0" 
-        class="clickable" 
-        width="2.5" 
-        height="0.3" 
-        depth="0.05" 
-        color="#2196F3" 
-        position="0 -0.1 0.01"
-        data-original-color="#2196F3"
-        animation__mouseenter="property: color; to: #1976D2; startEvents: mouseenter; dur: 200"
-        animation__mouseleave="property: color; to: #2196F3; startEvents: mouseleave; dur: 200">
-      </a-box>
-      <a-text id="vr-answer-text-0" value="A" align="center" color="#ffffff" width="2.2" position="0 -0.1 0.06"></a-text>
-      
-      <!-- Answer B -->
-      <a-box 
-        id="vr-answer-1" 
-        class="clickable" 
-        width="2.5" 
-        height="0.3" 
-        depth="0.05" 
-        color="#2196F3" 
-        position="0 -0.45 0.01"
-        data-original-color="#2196F3"
-        animation__mouseenter="property: color; to: #1976D2; startEvents: mouseenter; dur: 200"
-        animation__mouseleave="property: color; to: #2196F3; startEvents: mouseleave; dur: 200">
-      </a-box>
-      <a-text id="vr-answer-text-1" value="B" align="center" color="#ffffff" width="2.2" position="0 -0.45 0.06"></a-text>
-      
-      <!-- Answer C -->
-      <a-box 
-        id="vr-answer-2" 
-        class="clickable" 
-        width="2.5" 
-        height="0.3" 
-        depth="0.05" 
-        color="#2196F3" 
-        position="0 -0.8 0.01"
-        data-original-color="#2196F3"
-        animation__mouseenter="property: color; to: #1976D2; startEvents: mouseenter; dur: 200"
-        animation__mouseleave="property: color; to: #2196F3; startEvents: mouseleave; dur: 200">
-      </a-box>
-      <a-text id="vr-answer-text-2" value="C" align="center" color="#ffffff" width="2.2" position="0 -0.8 0.06"></a-text>
-      
-      <!-- Answer D -->
-      <a-box 
-        id="vr-answer-3" 
-        class="clickable" 
-        width="2.5" 
-        height="0.3" 
-        depth="0.05" 
-        color="#2196F3" 
-        position="0 -1.15 0.01"
-        data-original-color="#2196F3"
-        animation__mouseenter="property: color; to: #1976D2; startEvents: mouseenter; dur: 200"
-        animation__mouseleave="property: color; to: #2196F3; startEvents: mouseleave; dur: 200">
-      </a-box>
-      <a-text id="vr-answer-text-3" value="D" align="center" color="#ffffff" width="2.2" position="0 -1.15 0.06"></a-text>
-      
-      <!-- Minimize Button -->
-      <a-box 
-        id="vr-minimize" 
-        class="clickable" 
-        width="0.3" 
-        height="0.3" 
-        depth="0.05" 
-        color="#ff5555" 
-        position="1.3 1 0.01"
-        animation__mouseenter="property: scale; to: 1.2 1.2 1.2; startEvents: mouseenter; dur: 200"
-        animation__mouseleave="property: scale; to: 1 1 1; startEvents: mouseleave; dur: 200">
-      </a-box>
-      <a-text value="-" align="center" color="#ffffff" width="2" position="1.3 1 0.06"></a-text>
-    </a-entity>
-    
-    <!-- Question Icon when minimized (attached to camera rig) -->
-    <a-entity id="vr-icon" position="2 1.5 -1.5" visible="false">
-      <a-sphere class="clickable" radius="0.15" color="#4CAF50"></a-sphere>
-      <a-text value="?" align="center" color="#ffffff" width="1.5" position="0 0 0.16"></a-text>
     </a-entity>
     
   </a-scene>

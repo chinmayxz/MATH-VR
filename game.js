@@ -1,5 +1,5 @@
 // =============================================
-// Math VR Game - Unified Popup Version
+// Math VR Game - Unified HTML Popup for Both Modes
 // =============================================
 
 const game = {
@@ -10,162 +10,10 @@ const game = {
   currentQuestion: null,
   attempts: 0,
   answeredCorrectly: false,
-  isVRMode: false,
   
   // Initialize game
   init() {
     console.log('🎮 Math VR Initialized');
-    this.setupVRDetection();
-  },
-  
-  // Detect VR mode changes
-  setupVRDetection() {
-    const scene = document.querySelector('a-scene');
-    if (scene) {
-      scene.addEventListener('enter-vr', () => {
-        console.log('🥽 Entered VR mode');
-        this.isVRMode = true;
-        this.showVRPopup();
-      });
-      
-      scene.addEventListener('exit-vr', () => {
-        console.log('🖥️ Exited VR mode');
-        this.isVRMode = false;
-        this.hideVRPopup();
-      });
-    }
-  },
-  
-  // Show VR popup (hide desktop popup)
-  showVRPopup() {
-    // Hide desktop popups
-    document.getElementById('entrance-screen').style.display = 'none';
-    document.getElementById('question-popup').style.display = 'none';
-    document.getElementById('question-icon').style.display = 'none';
-    
-    // Show VR popup
-    const vrPopup = document.getElementById('vr-popup');
-    if (vrPopup) {
-      vrPopup.setAttribute('visible', 'true');
-    }
-    
-    // Update VR popup with current data
-    if (this.currentQuestion) {
-      this.updateVRDisplay();
-    }
-  },
-  
-  // Hide VR popup (show desktop popup)
-  hideVRPopup() {
-    const vrPopup = document.getElementById('vr-popup');
-    const vrIcon = document.getElementById('vr-icon');
-    
-    if (vrPopup) vrPopup.setAttribute('visible', 'false');
-    if (vrIcon) vrIcon.setAttribute('visible', 'false');
-    
-    // Show appropriate desktop popup
-    if (this.currentQuestion) {
-      document.getElementById('question-popup').style.display = 'block';
-    } else {
-      document.getElementById('entrance-screen').style.display = 'flex';
-    }
-  },
-  
-  // Setup VR click handlers
-  setupVRClickHandlers() {
-    console.log('🎮 Setting up VR click handlers...');
-    
-    // Answer buttons
-    for (let i = 0; i < 4; i++) {
-      const box = document.getElementById(`vr-answer-${i}`);
-      if (box) {
-        // Remove old listeners
-        box.removeAttribute('data-setup');
-        
-        // Add click event
-        box.addEventListener('click', () => {
-          console.log(`Clicked answer ${i}`);
-          if (this.currentQuestion && !this.answeredCorrectly) {
-            this.checkAnswer(this.currentQuestion.answers[i], null, i);
-          }
-        });
-        
-        // Add hover feedback (console log for debugging)
-        box.addEventListener('mouseenter', () => {
-          console.log(`Hovering over answer ${i}`);
-        });
-        
-        box.setAttribute('data-setup', 'true');
-      }
-    }
-    
-    // Minimize button
-    const minBtn = document.getElementById('vr-minimize');
-    if (minBtn && !minBtn.hasAttribute('data-setup')) {
-      minBtn.addEventListener('click', () => {
-        console.log('Minimize clicked');
-        const vrPopup = document.getElementById('vr-popup');
-        const vrIcon = document.getElementById('vr-icon');
-        if (vrPopup) vrPopup.setAttribute('visible', 'false');
-        if (vrIcon) vrIcon.setAttribute('visible', 'true');
-      });
-      minBtn.setAttribute('data-setup', 'true');
-    }
-    
-    // Restore icon
-    const icon = document.getElementById('vr-icon');
-    const iconSphere = icon ? icon.querySelector('a-sphere') : null;
-    if (iconSphere && !iconSphere.hasAttribute('data-setup')) {
-      iconSphere.addEventListener('click', () => {
-        console.log('Restore clicked');
-        const vrPopup = document.getElementById('vr-popup');
-        const vrIcon = document.getElementById('vr-icon');
-        if (vrPopup) vrPopup.setAttribute('visible', 'true');
-        if (vrIcon) vrIcon.setAttribute('visible', 'false');
-      });
-      iconSphere.setAttribute('data-setup', 'true');
-    }
-    
-    console.log('✅ VR click handlers setup complete');
-  },
-  
-  // Update VR display with current question
-  updateVRDisplay() {
-    if (!this.currentQuestion) return;
-    
-    // Score
-    const scoreEl = document.getElementById('vr-score-display');
-    if (scoreEl) {
-      scoreEl.setAttribute('value', `Score: ${this.score} | Questions: ${this.currentQuestionIndex + 1}/${this.totalQuestions}`);
-    }
-    
-    // Category
-    const categoryEl = document.getElementById('vr-category');
-    if (categoryEl) {
-      categoryEl.setAttribute('value', this.currentQuestion.category);
-    }
-    
-    // Question
-    const questionEl = document.getElementById('vr-question');
-    if (questionEl) {
-      questionEl.setAttribute('value', this.currentQuestion.question);
-    }
-    
-    // Answers
-    for (let i = 0; i < 4; i++) {
-      const textEl = document.getElementById(`vr-answer-text-${i}`);
-      const boxEl = document.getElementById(`vr-answer-${i}`);
-      
-      if (textEl && this.currentQuestion.answers[i]) {
-        const letter = String.fromCharCode(65 + i);
-        textEl.setAttribute('value', `${letter}. ${this.currentQuestion.answers[i]}`);
-      }
-      
-      // Reset color
-      if (boxEl) {
-        boxEl.setAttribute('color', '#2196F3');
-      }
-    }
   },
   
   // Load questions from API or generate
@@ -303,7 +151,7 @@ const game = {
     this.attempts = 0;
     this.answeredCorrectly = false;
     
-    // Update desktop UI
+    // Update HTML popup
     document.getElementById('question-count').textContent = (this.currentQuestionIndex + 1);
     document.getElementById('category-badge').textContent = this.currentQuestion.category;
     document.getElementById('question-text').textContent = this.currentQuestion.question;
@@ -315,20 +163,17 @@ const game = {
       const button = document.createElement('button');
       button.className = 'answer-button';
       button.textContent = `${String.fromCharCode(65 + index)}. ${answer}`;
-      button.onclick = () => this.checkAnswer(answer, button, index);
+      button.onclick = () => this.checkAnswer(answer, button);
       container.appendChild(button);
     });
     
     document.getElementById('next-button').style.display = 'none';
     
-    // Update VR display
-    this.updateVRDisplay();
-    
     console.log(`❓ Question ${this.currentQuestionIndex + 1}: ${this.currentQuestion.question}`);
   },
   
   // Check answer
-  checkAnswer(selectedAnswer, button, answerIndex) {
+  checkAnswer(selectedAnswer, button) {
     if (this.answeredCorrectly) return;
     
     this.attempts++;
@@ -337,18 +182,8 @@ const game = {
     if (isCorrect) {
       console.log('✅ Correct!');
       
-      // Desktop feedback
       if (button) {
         button.classList.add('correct');
-      }
-      
-      // VR feedback
-      if (answerIndex !== undefined) {
-        const vrBox = document.getElementById(`vr-answer-${answerIndex}`);
-        if (vrBox) {
-          vrBox.setAttribute('color', '#4CAF50');
-          vrBox.setAttribute('animation', 'property: scale; to: 1.1 1.1 1.1; dur: 200; dir: alternate; loop: 2');
-        }
       }
       
       // Award points (only first try)
@@ -361,11 +196,10 @@ const game = {
       
       this.answeredCorrectly = true;
       
-      // Update scores
+      // Update score
       document.getElementById('score').textContent = this.score;
-      this.updateVRDisplay();
       
-      // Disable desktop buttons
+      // Disable buttons
       const buttons = document.querySelectorAll('.answer-button');
       buttons.forEach(btn => btn.disabled = true);
       
@@ -381,19 +215,9 @@ const game = {
     } else {
       console.log('❌ Try again!');
       
-      // Desktop feedback
       if (button) {
         button.classList.add('wrong');
         setTimeout(() => button.classList.remove('wrong'), 500);
-      }
-      
-      // VR feedback
-      if (answerIndex !== undefined) {
-        const vrBox = document.getElementById(`vr-answer-${answerIndex}`);
-        if (vrBox) {
-          vrBox.setAttribute('color', '#f44336');
-          setTimeout(() => vrBox.setAttribute('color', '#2196F3'), 600);
-        }
       }
     }
   },
@@ -416,12 +240,6 @@ const game = {
     document.getElementById('answers-container').innerHTML = '';
     document.getElementById('next-button').style.display = 'none';
     
-    // Update VR
-    const vrQuestion = document.getElementById('vr-question');
-    if (vrQuestion) {
-      vrQuestion.setAttribute('value', `Game Complete! Final Score: ${this.score}/${this.totalQuestions * 10}`);
-    }
-    
     console.log('🎉 Game complete!');
   }
 };
@@ -436,12 +254,6 @@ function enterGame() {
   game.loadQuestions().then(() => {
     setTimeout(() => {
       document.getElementById('question-popup').classList.add('visible');
-      
-      // If in VR, switch to VR popup
-      if (game.isVRMode) {
-        game.showVRPopup();
-      }
-      
       game.showQuestion();
     }, 500);
   });
@@ -450,31 +262,17 @@ function enterGame() {
 }
 
 function minimizePopup() {
-  if (game.isVRMode) {
-    const vrPopup = document.getElementById('vr-popup');
-    const vrIcon = document.getElementById('vr-icon');
-    if (vrPopup) vrPopup.setAttribute('visible', 'false');
-    if (vrIcon) vrIcon.setAttribute('visible', 'true');
-  } else {
-    const popup = document.getElementById('question-popup');
-    const icon = document.getElementById('question-icon');
-    popup.classList.add('minimized');
-    icon.classList.add('visible');
-  }
+  const popup = document.getElementById('question-popup');
+  const icon = document.getElementById('question-icon');
+  popup.classList.add('minimized');
+  icon.classList.add('visible');
 }
 
 function maximizePopup() {
-  if (game.isVRMode) {
-    const vrPopup = document.getElementById('vr-popup');
-    const vrIcon = document.getElementById('vr-icon');
-    if (vrPopup) vrPopup.setAttribute('visible', 'true');
-    if (vrIcon) vrIcon.setAttribute('visible', 'false');
-  } else {
-    const popup = document.getElementById('question-popup');
-    const icon = document.getElementById('question-icon');
-    popup.classList.remove('minimized');
-    icon.classList.remove('visible');
-  }
+  const popup = document.getElementById('question-popup');
+  const icon = document.getElementById('question-icon');
+  popup.classList.remove('minimized');
+  icon.classList.remove('visible');
 }
 
 function nextQuestion() {
@@ -484,17 +282,4 @@ function nextQuestion() {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   game.init();
-  
-  // Wait for A-Frame scene to load before setting up VR handlers
-  const scene = document.querySelector('a-scene');
-  if (scene) {
-    if (scene.hasLoaded) {
-      game.setupVRClickHandlers();
-    } else {
-      scene.addEventListener('loaded', () => {
-        console.log('🎬 A-Frame scene loaded');
-        game.setupVRClickHandlers();
-      });
-    }
-  }
 });
