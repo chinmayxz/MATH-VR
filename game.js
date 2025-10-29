@@ -40,19 +40,27 @@ const game = {
   
   // Switch to VR mode UI
   switchToVRMode() {
-    // Hide 2D HTML popup
+    console.log('🥽 Switching to VR mode UI');
+    
+    // Hide 2D HTML elements
     document.getElementById('question-popup').style.display = 'none';
     document.getElementById('question-icon').style.display = 'none';
+    document.getElementById('entrance-screen').style.display = 'none';
     
-    // Show 3D VR panel
+    // VR panels are already attached to camera and visible
+    // Just update their visibility based on game state
+    const vrEntrance = document.getElementById('vr-entrance');
     const vrPanel = document.getElementById('vr-question-panel');
-    if (vrPanel && !this.isPanelMinimized) {
-      vrPanel.setAttribute('visible', 'true');
-    }
     
-    // Update VR panel with current question
     if (this.currentQuestion) {
+      // Game has started - show question panel
+      if (vrEntrance) vrEntrance.setAttribute('visible', 'false');
+      if (vrPanel) vrPanel.setAttribute('visible', !this.isPanelMinimized);
       this.updateVRPanel();
+    } else {
+      // Game hasn't started - show entrance
+      if (vrEntrance) vrEntrance.setAttribute('visible', 'true');
+      if (vrPanel) vrPanel.setAttribute('visible', 'false');
     }
     
     // Setup VR click handlers
@@ -61,27 +69,44 @@ const game = {
   
   // Switch to desktop mode UI
   switchToDesktopMode() {
-    // Show 2D HTML popup
-    if (!this.isPanelMinimized) {
-      document.getElementById('question-popup').classList.add('visible');
-      document.getElementById('question-popup').classList.remove('minimized');
+    console.log('🖥️ Switching to desktop mode UI');
+    
+    // Show 2D HTML elements
+    if (this.currentQuestion) {
+      // Game has started
+      if (!this.isPanelMinimized) {
+        document.getElementById('question-popup').classList.add('visible');
+        document.getElementById('question-popup').classList.remove('minimized');
+        document.getElementById('question-popup').style.display = 'block';
+      } else {
+        document.getElementById('question-icon').style.display = 'flex';
+      }
     } else {
-      document.getElementById('question-icon').style.display = 'flex';
+      // Game hasn't started - show entrance
+      document.getElementById('entrance-screen').style.display = 'flex';
     }
     
-    // Hide 3D VR panel
+    // Hide VR panels (they're attached to camera, just hide them)
     const vrPanel = document.getElementById('vr-question-panel');
-    if (vrPanel) {
-      vrPanel.setAttribute('visible', 'false');
-    }
     const vrIcon = document.getElementById('vr-question-icon');
-    if (vrIcon) {
-      vrIcon.setAttribute('visible', 'false');
-    }
+    const vrEntrance = document.getElementById('vr-entrance');
+    
+    // Note: Don't set visible=false because they're attached to camera
+    // They'll still be there but we're in desktop mode
+    // The 2D overlay will cover them
   },
   
   // Setup click handlers for VR answer buttons
   setupVRClickHandlers() {
+    // VR Begin button
+    const beginBtn = document.getElementById('vr-begin-button');
+    if (beginBtn && !beginBtn.hasAttribute('data-click-setup')) {
+      beginBtn.setAttribute('data-click-setup', 'true');
+      beginBtn.addEventListener('click', () => {
+        enterGame();
+      });
+    }
+    
     // Answer buttons
     for (let i = 0; i < 4; i++) {
       const box = document.getElementById(`vr-option-${i}`);
@@ -451,24 +476,32 @@ const game = {
 // =============================================
 
 function enterGame() {
-  // Hide entrance screen
+  // Hide 2D entrance screen
   document.getElementById('entrance-screen').classList.add('hidden');
+  
+  // Hide VR entrance screen
+  const vrEntrance = document.getElementById('vr-entrance');
+  if (vrEntrance) {
+    vrEntrance.setAttribute('visible', 'false');
+  }
   
   // Load questions
   game.loadQuestions().then(() => {
-    // Show popup after 1 second
+    // Show popups after 1 second
     setTimeout(() => {
-      // Show 2D popup for desktop
-      document.getElementById('question-popup').classList.add('visible');
+      // Show 2D popup for desktop (unless in VR)
+      if (!game.isVRMode) {
+        document.getElementById('question-popup').classList.add('visible');
+      }
       
-      // If already in VR mode, show VR panel instead
-      if (game.isVRMode) {
-        document.getElementById('question-popup').style.display = 'none';
-        document.getElementById('vr-question-panel').setAttribute('visible', 'true');
+      // Show VR panel (will be visible in VR mode)
+      const vrPanel = document.getElementById('vr-question-panel');
+      if (vrPanel) {
+        vrPanel.setAttribute('visible', 'true');
       }
       
       game.showQuestion();
-    }, 1000);
+    }, 500);
   });
   
   console.log('🎮 Game started!');
