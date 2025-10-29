@@ -381,8 +381,175 @@
         look-controls 
         wasd-controls="acceleration: 20"
         position="0 0 0">
+        
+        <!-- VR Cursor for clicking -->
+        <a-cursor
+          id="vr-cursor"
+          color="#4CAF50"
+          raycaster="objects: .clickable"
+          fuse="true"
+          fuseTimeout="1500">
+        </a-cursor>
       </a-entity>
     </a-entity>
+    
+    <!-- 3D Question Panel for VR Mode -->
+    <a-entity id="vr-question-panel" position="0 2 -3" visible="false">
+      <!-- Background Panel -->
+      <a-plane 
+        width="4" 
+        height="3" 
+        color="#1a1a2e" 
+        opacity="0.95">
+      </a-plane>
+      
+      <!-- Score Display -->
+      <a-text 
+        id="vr-score-text"
+        value="Score: 0 | Question: 1/10"
+        align="center"
+        width="3.5"
+        position="0 1.3 0.01"
+        color="#4CAF50">
+      </a-text>
+      
+      <!-- Category Badge -->
+      <a-text 
+        id="vr-category-text"
+        value="Math Challenge"
+        align="center"
+        width="3.5"
+        position="0 1.1 0.01"
+        color="#64B5F6">
+      </a-text>
+      
+      <!-- Question Text -->
+      <a-text 
+        id="vr-question-text"
+        value="Loading question..."
+        align="center"
+        width="3.5"
+        position="0 0.7 0.01"
+        color="#ffffff"
+        wrap-count="40">
+      </a-text>
+      
+      <!-- Answer Buttons in VR -->
+      <a-box 
+        id="vr-option-0"
+        class="clickable vr-answer"
+        position="-1.5 0.1 0.02"
+        width="1.4" 
+        height="0.5" 
+        depth="0.1"
+        color="#2196F3"
+        data-index="0">
+      </a-box>
+      <a-text 
+        id="vr-option-text-0"
+        value="A"
+        align="center"
+        width="2"
+        position="-1.5 0.1 0.13"
+        color="#ffffff"
+        wrap-count="15">
+      </a-text>
+      
+      <a-box 
+        id="vr-option-1"
+        class="clickable vr-answer"
+        position="0.5 0.1 0.02"
+        width="1.4" 
+        height="0.5" 
+        depth="0.1"
+        color="#2196F3"
+        data-index="1">
+      </a-box>
+      <a-text 
+        id="vr-option-text-1"
+        value="B"
+        align="center"
+        width="2"
+        position="0.5 0.1 0.13"
+        color="#ffffff"
+        wrap-count="15">
+      </a-text>
+      
+      <a-box 
+        id="vr-option-2"
+        class="clickable vr-answer"
+        position="-1.5 -0.5 0.02"
+        width="1.4" 
+        height="0.5" 
+        depth="0.1"
+        color="#2196F3"
+        data-index="2">
+      </a-box>
+      <a-text 
+        id="vr-option-text-2"
+        value="C"
+        align="center"
+        width="2"
+        position="-1.5 -0.5 0.13"
+        color="#ffffff"
+        wrap-count="15">
+      </a-text>
+      
+      <a-box 
+        id="vr-option-3"
+        class="clickable vr-answer"
+        position="0.5 -0.5 0.02"
+        width="1.4" 
+        height="0.5" 
+        depth="0.1"
+        color="#2196F3"
+        data-index="3">
+      </a-box>
+      <a-text 
+        id="vr-option-text-3"
+        value="D"
+        align="center"
+        width="2"
+        position="0.5 -0.5 0.13"
+        color="#ffffff"
+        wrap-count="15">
+      </a-text>
+      
+      <!-- Minimize Button -->
+      <a-box 
+        id="vr-minimize-btn"
+        class="clickable"
+        position="1.7 1.3 0.02"
+        width="0.4" 
+        height="0.4" 
+        depth="0.1"
+        color="#ff5555">
+      </a-box>
+      <a-text 
+        value="-"
+        align="center"
+        width="2"
+        position="1.7 1.3 0.13"
+        color="#ffffff">
+      </a-text>
+    </a-entity>
+    
+    <!-- VR Question Icon (when minimized) -->
+    <a-entity id="vr-question-icon" position="2 1.5 -2" visible="false">
+      <a-sphere
+        class="clickable"
+        radius="0.3"
+        color="#4CAF50">
+      </a-sphere>
+      <a-text 
+        value="?"
+        align="center"
+        width="2"
+        position="0 0 0.31"
+        color="#ffffff">
+      </a-text>
+    </a-entity>
+    
   </a-scene>
 
   <!-- Game Logic -->

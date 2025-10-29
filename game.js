@@ -10,10 +10,171 @@ const game = {
   currentQuestion: null,
   attempts: 0, // Track attempts for current question
   answeredCorrectly: false,
+  isVRMode: false, // Track if in VR mode
+  isPanelMinimized: false, // Track if panel is minimized
   
   // Initialize game
   init() {
     console.log('🎮 Math VR Initialized');
+    this.setupVRListeners();
+  },
+  
+  // Setup VR mode detection
+  setupVRListeners() {
+    const scene = document.querySelector('a-scene');
+    
+    if (scene) {
+      scene.addEventListener('enter-vr', () => {
+        console.log('🥽 Entered VR mode');
+        this.isVRMode = true;
+        this.switchToVRMode();
+      });
+      
+      scene.addEventListener('exit-vr', () => {
+        console.log('👋 Exited VR mode');
+        this.isVRMode = false;
+        this.switchToDesktopMode();
+      });
+    }
+  },
+  
+  // Switch to VR mode UI
+  switchToVRMode() {
+    // Hide 2D HTML popup
+    document.getElementById('question-popup').style.display = 'none';
+    document.getElementById('question-icon').style.display = 'none';
+    
+    // Show 3D VR panel
+    const vrPanel = document.getElementById('vr-question-panel');
+    if (vrPanel && !this.isPanelMinimized) {
+      vrPanel.setAttribute('visible', 'true');
+    }
+    
+    // Update VR panel with current question
+    if (this.currentQuestion) {
+      this.updateVRPanel();
+    }
+    
+    // Setup VR click handlers
+    this.setupVRClickHandlers();
+  },
+  
+  // Switch to desktop mode UI
+  switchToDesktopMode() {
+    // Show 2D HTML popup
+    if (!this.isPanelMinimized) {
+      document.getElementById('question-popup').classList.add('visible');
+      document.getElementById('question-popup').classList.remove('minimized');
+    } else {
+      document.getElementById('question-icon').style.display = 'flex';
+    }
+    
+    // Hide 3D VR panel
+    const vrPanel = document.getElementById('vr-question-panel');
+    if (vrPanel) {
+      vrPanel.setAttribute('visible', 'false');
+    }
+    const vrIcon = document.getElementById('vr-question-icon');
+    if (vrIcon) {
+      vrIcon.setAttribute('visible', 'false');
+    }
+  },
+  
+  // Setup click handlers for VR answer buttons
+  setupVRClickHandlers() {
+    // Answer buttons
+    for (let i = 0; i < 4; i++) {
+      const box = document.getElementById(`vr-option-${i}`);
+      if (box && !box.hasAttribute('data-click-setup')) {
+        box.setAttribute('data-click-setup', 'true');
+        box.addEventListener('click', () => {
+          if (!this.answeredCorrectly && this.currentQuestion) {
+            this.checkAnswer(this.currentQuestion.answers[i], null, i);
+          }
+        });
+      }
+    }
+    
+    // Minimize button
+    const minBtn = document.getElementById('vr-minimize-btn');
+    if (minBtn && !minBtn.hasAttribute('data-click-setup')) {
+      minBtn.setAttribute('data-click-setup', 'true');
+      minBtn.addEventListener('click', () => {
+        this.minimizeVRPanel();
+      });
+    }
+    
+    // Restore icon
+    const icon = document.getElementById('vr-question-icon');
+    if (icon && !icon.hasAttribute('data-click-setup')) {
+      icon.setAttribute('data-click-setup', 'true');
+      icon.addEventListener('click', () => {
+        this.maximizeVRPanel();
+      });
+    }
+  },
+  
+  // Minimize VR panel
+  minimizeVRPanel() {
+    this.isPanelMinimized = true;
+    const vrPanel = document.getElementById('vr-question-panel');
+    const vrIcon = document.getElementById('vr-question-icon');
+    
+    if (vrPanel) vrPanel.setAttribute('visible', 'false');
+    if (vrIcon) vrIcon.setAttribute('visible', 'true');
+    
+    console.log('➖ VR panel minimized');
+  },
+  
+  // Maximize VR panel
+  maximizeVRPanel() {
+    this.isPanelMinimized = false;
+    const vrPanel = document.getElementById('vr-question-panel');
+    const vrIcon = document.getElementById('vr-question-icon');
+    
+    if (vrPanel) vrPanel.setAttribute('visible', 'true');
+    if (vrIcon) vrIcon.setAttribute('visible', 'false');
+    
+    console.log('➕ VR panel restored');
+  },
+  
+  // Update VR panel with question data
+  updateVRPanel() {
+    if (!this.currentQuestion) return;
+    
+    // Update score and count
+    const scoreText = document.getElementById('vr-score-text');
+    if (scoreText) {
+      scoreText.setAttribute('value', `Score: ${this.score} | Question: ${this.currentQuestionIndex + 1}/${this.totalQuestions}`);
+    }
+    
+    // Update category
+    const categoryText = document.getElementById('vr-category-text');
+    if (categoryText) {
+      categoryText.setAttribute('value', this.currentQuestion.category);
+    }
+    
+    // Update question
+    const questionText = document.getElementById('vr-question-text');
+    if (questionText) {
+      questionText.setAttribute('value', this.currentQuestion.question);
+    }
+    
+    // Update answers
+    for (let i = 0; i < 4; i++) {
+      const optionText = document.getElementById(`vr-option-text-${i}`);
+      const optionBox = document.getElementById(`vr-option-${i}`);
+      
+      if (optionText && this.currentQuestion.answers[i]) {
+        const letter = String.fromCharCode(65 + i); // A, B, C, D
+        optionText.setAttribute('value', `${letter}. ${this.currentQuestion.answers[i]}`);
+      }
+      
+      // Reset color
+      if (optionBox) {
+        optionBox.setAttribute('color', '#2196F3');
+      }
+    }
   },
   
   // Load questions from API or generate custom ones
@@ -152,7 +313,7 @@ const game = {
     this.attempts = 0;
     this.answeredCorrectly = false;
     
-    // Update UI
+    // Update 2D HTML UI
     document.getElementById('question-count').textContent = (this.currentQuestionIndex + 1);
     document.getElementById('category-badge').textContent = this.currentQuestion.category;
     document.getElementById('question-text').textContent = this.currentQuestion.question;
@@ -165,18 +326,21 @@ const game = {
       const button = document.createElement('button');
       button.className = 'answer-button';
       button.textContent = `${String.fromCharCode(65 + index)}. ${answer}`;
-      button.onclick = () => this.checkAnswer(answer, button);
+      button.onclick = () => this.checkAnswer(answer, button, index);
       container.appendChild(button);
     });
     
     // Hide next button
     document.getElementById('next-button').style.display = 'none';
     
+    // Update VR panel too
+    this.updateVRPanel();
+    
     console.log(`❓ Question ${this.currentQuestionIndex + 1}: ${this.currentQuestion.question}`);
   },
   
   // Check answer - allows multiple attempts
-  checkAnswer(selectedAnswer, button) {
+  checkAnswer(selectedAnswer, button, answerIndex) {
     if (this.answeredCorrectly) return; // Already answered correctly
     
     this.attempts++;
@@ -185,8 +349,19 @@ const game = {
     if (isCorrect) {
       console.log('✅ Correct!');
       
-      // Visual feedback
-      button.classList.add('correct');
+      // Visual feedback for 2D button
+      if (button) {
+        button.classList.add('correct');
+      }
+      
+      // Visual feedback for VR box
+      if (answerIndex !== undefined) {
+        const vrBox = document.getElementById(`vr-option-${answerIndex}`);
+        if (vrBox) {
+          vrBox.setAttribute('color', '#4CAF50');
+          vrBox.setAttribute('animation', 'property: scale; to: 1.2 1.2 1.2; dur: 200; dir: alternate; loop: 2');
+        }
+      }
       
       // Award points only on first attempt
       if (this.attempts === 1) {
@@ -198,10 +373,11 @@ const game = {
       
       this.answeredCorrectly = true;
       
-      // Update score display
+      // Update score display (both 2D and VR)
       document.getElementById('score').textContent = this.score;
+      this.updateVRPanel(); // Update VR score
       
-      // Disable all buttons
+      // Disable all 2D buttons
       const buttons = document.querySelectorAll('.answer-button');
       buttons.forEach(btn => btn.disabled = true);
       
@@ -218,15 +394,32 @@ const game = {
     } else {
       console.log('❌ Try again!');
       
-      // Visual feedback
-      button.classList.add('wrong');
+      // Visual feedback for 2D button
+      if (button) {
+        button.classList.add('wrong');
+        setTimeout(() => {
+          button.classList.remove('wrong');
+        }, 500);
+      }
       
-      // Remove wrong class after animation
-      setTimeout(() => {
-        button.classList.remove('wrong');
-      }, 500);
+      // Visual feedback for VR box
+      if (answerIndex !== undefined) {
+        const vrBox = document.getElementById(`vr-option-${answerIndex}`);
+        if (vrBox) {
+          vrBox.setAttribute('color', '#f44336');
+          vrBox.setAttribute('animation', 'property: position; to: ' + 
+            (vrBox.getAttribute('position').x + 0.1) + ' ' + 
+            vrBox.getAttribute('position').y + ' ' + 
+            vrBox.getAttribute('position').z + '; dur: 100; dir: alternate; loop: 3');
+          
+          // Reset color after animation
+          setTimeout(() => {
+            vrBox.setAttribute('color', '#2196F3');
+          }, 600);
+        }
+      }
       
-      // Don't disable button - user can try again!
+      // Don't disable - user can try again!
     }
   },
   
@@ -265,7 +458,15 @@ function enterGame() {
   game.loadQuestions().then(() => {
     // Show popup after 1 second
     setTimeout(() => {
+      // Show 2D popup for desktop
       document.getElementById('question-popup').classList.add('visible');
+      
+      // If already in VR mode, show VR panel instead
+      if (game.isVRMode) {
+        document.getElementById('question-popup').style.display = 'none';
+        document.getElementById('vr-question-panel').setAttribute('visible', 'true');
+      }
+      
       game.showQuestion();
     }, 1000);
   });
@@ -274,21 +475,33 @@ function enterGame() {
 }
 
 function minimizePopup() {
-  const popup = document.getElementById('question-popup');
-  const icon = document.getElementById('question-icon');
+  game.isPanelMinimized = true;
   
-  popup.classList.add('minimized');
-  icon.classList.add('visible');
+  if (game.isVRMode) {
+    game.minimizeVRPanel();
+  } else {
+    const popup = document.getElementById('question-popup');
+    const icon = document.getElementById('question-icon');
+    
+    popup.classList.add('minimized');
+    icon.classList.add('visible');
+  }
   
   console.log('➖ Popup minimized - explore the environment!');
 }
 
 function maximizePopup() {
-  const popup = document.getElementById('question-popup');
-  const icon = document.getElementById('question-icon');
+  game.isPanelMinimized = false;
   
-  popup.classList.remove('minimized');
-  icon.classList.remove('visible');
+  if (game.isVRMode) {
+    game.maximizeVRPanel();
+  } else {
+    const popup = document.getElementById('question-popup');
+    const icon = document.getElementById('question-icon');
+    
+    popup.classList.remove('minimized');
+    icon.classList.remove('visible');
+  }
   
   console.log('➕ Popup restored - continue where you left off!');
 }
