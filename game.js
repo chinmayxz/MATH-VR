@@ -1,259 +1,144 @@
 // =============================================
-// Math VR Game - Complete Game Logic
+// Math VR Game - Simple Overlay Version
 // =============================================
 
 const game = {
   score: 0,
-  streak: 0,
-  questions: [],
   currentQuestionIndex: 0,
+  totalQuestions: 10,
+  questions: [],
   currentQuestion: null,
+  attempts: 0, // Track attempts for current question
   answeredCorrectly: false,
-  totalQuestions: 0,
-  
-  // API endpoints for math questions
-  apis: {
-    // Open Trivia DB - Science & Mathematics
-    opentdb: 'https://opentdb.com/api.php?amount=10&category=19&type=multiple',
-    // NumbersAPI for interesting math facts (backup)
-    numbersapi: 'http://numbersapi.com/random/math?json',
-    // We'll also generate our own math questions as fallback
-  },
   
   // Initialize game
   init() {
-    console.log('🎮 Initializing Math VR Game...');
-    
-    // Hide loading screen after scene loads
-    const scene = document.querySelector('a-scene');
-    scene.addEventListener('loaded', () => {
-      setTimeout(() => {
-        document.getElementById('loading-screen').classList.add('hidden');
-      }, 1000);
-    });
-    
-    // Set up click handlers for answer boxes
-    this.setupAnswerHandlers();
-    
-    // Set default environment
-    this.setEnvironment('boulder');
-    
-    console.log('✅ Game initialized!');
+    console.log('🎮 Math VR Initialized');
   },
   
-  // Set up click handlers for answer options
-  setupAnswerHandlers() {
-    for (let i = 0; i < 4; i++) {
-      const box = document.getElementById(`option-${i}`);
-      if (box) {
-        box.addEventListener('click', () => {
-          this.checkAnswer(i);
-        });
-      }
-    }
-  },
-  
-  // Start trivia game
-  async startTrivia() {
-    console.log('🎯 Starting trivia...');
-    
-    // Hide welcome panel
-    const welcomePanel = document.getElementById('welcome-panel');
-    if (welcomePanel) welcomePanel.setAttribute('visible', 'false');
-    
-    // Show question panel
-    const questionPanel = document.getElementById('question-panel');
-    if (questionPanel) questionPanel.setAttribute('visible', 'true');
-    
-    // Hide start button, show UI
-    document.getElementById('start-btn').classList.add('hide');
-    
-    // Reset game state
-    this.score = 0;
-    this.streak = 0;
-    this.currentQuestionIndex = 0;
-    this.totalQuestions = 0;
-    this.updateScoreDisplay();
-    
-    // Load questions
-    await this.loadQuestions();
-    
-    // Show first question
-    this.showQuestion();
-  },
-  
-  // Load questions from API or generate them
+  // Load questions from API or generate custom ones
   async loadQuestions() {
     console.log('📚 Loading questions...');
     
     try {
-      // Try to load from Open Trivia DB (Math & Science)
-      const response = await fetch(this.apis.opentdb);
+      // Try Open Trivia DB API
+      const response = await fetch('https://opentdb.com/api.php?amount=10&category=19&type=multiple');
       const data = await response.json();
       
       if (data.response_code === 0 && data.results.length > 0) {
         this.questions = data.results.map(q => this.formatAPIQuestion(q));
-        console.log(`✅ Loaded ${this.questions.length} questions from API`);
+        console.log('✅ Loaded API questions');
       } else {
-        throw new Error('API returned no results');
+        throw new Error('API failed');
       }
     } catch (error) {
-      console.log('⚠️ API failed, generating custom math questions...');
-      this.questions = this.generateMathQuestions(10);
+      console.log('⚠️ Using custom questions');
+      this.questions = this.generateCustomQuestions(10);
     }
   },
   
-  // Format API question to our format
-  formatAPIQuestion(apiQuestion) {
-    // Decode HTML entities
-    const decodeHTML = (html) => {
+  // Format API question
+  formatAPIQuestion(q) {
+    const decode = (html) => {
       const txt = document.createElement('textarea');
       txt.innerHTML = html;
       return txt.value;
     };
     
-    const incorrect = apiQuestion.incorrect_answers.map(a => decodeHTML(a));
-    const correct = decodeHTML(apiQuestion.correct_answer);
-    const allAnswers = [...incorrect, correct];
+    const answers = [...q.incorrect_answers.map(a => decode(a)), decode(q.correct_answer)];
     
     // Shuffle answers
-    for (let i = allAnswers.length - 1; i > 0; i--) {
+    for (let i = answers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [allAnswers[i], allAnswers[j]] = [allAnswers[j], allAnswers[i]];
+      [answers[i], answers[j]] = [answers[j], answers[i]];
     }
     
     return {
-      question: decodeHTML(apiQuestion.question),
-      category: decodeHTML(apiQuestion.category),
-      answers: allAnswers,
-      correctAnswer: correct,
-      difficulty: apiQuestion.difficulty
+      question: decode(q.question),
+      category: decode(q.category),
+      answers: answers,
+      correctAnswer: decode(q.correct_answer)
     };
   },
   
   // Generate custom math questions
-  generateMathQuestions(count) {
+  generateCustomQuestions(count) {
     const questions = [];
-    const operations = ['+', '-', '×', '÷'];
-    const categories = [
-      'Basic Arithmetic',
-      'Mental Math',
-      'Quick Calculation',
-      'Number Sense',
-      'Math IQ Challenge'
-    ];
     
     for (let i = 0; i < count; i++) {
-      const category = categories[Math.floor(Math.random() * categories.length)];
+      const type = Math.floor(Math.random() * 6);
       let question, correctAnswer, answers;
       
-      // Generate different types of questions
-      const questionType = Math.floor(Math.random() * 5);
-      
-      switch(questionType) {
-        case 0: // Basic arithmetic
-          const a = Math.floor(Math.random() * 20) + 1;
-          const b = Math.floor(Math.random() * 20) + 1;
-          const op = operations[Math.floor(Math.random() * operations.length)];
-          
-          switch(op) {
-            case '+':
-              correctAnswer = a + b;
-              question = `What is ${a} + ${b}?`;
-              break;
-            case '-':
-              correctAnswer = a - b;
-              question = `What is ${a} - ${b}?`;
-              break;
-            case '×':
-              correctAnswer = a * b;
-              question = `What is ${a} × ${b}?`;
-              break;
-            case '÷':
-              const dividend = a * b;
-              correctAnswer = a;
-              question = `What is ${dividend} ÷ ${b}?`;
-              break;
-          }
-          
-          answers = this.generateAnswerOptions(correctAnswer);
+      switch(type) {
+        case 0: // Addition
+          const a1 = Math.floor(Math.random() * 50) + 10;
+          const b1 = Math.floor(Math.random() * 50) + 10;
+          correctAnswer = a1 + b1;
+          question = `What is ${a1} + ${b1}?`;
           break;
           
-        case 1: // Squares
-          const num = Math.floor(Math.random() * 15) + 2;
-          correctAnswer = num * num;
-          question = `What is ${num}² (${num} squared)?`;
-          answers = this.generateAnswerOptions(correctAnswer);
+        case 1: // Subtraction
+          const a2 = Math.floor(Math.random() * 50) + 30;
+          const b2 = Math.floor(Math.random() * 30) + 10;
+          correctAnswer = a2 - b2;
+          question = `What is ${a2} - ${b2}?`;
           break;
           
-        case 2: // Percentage
-          const whole = [20, 25, 40, 50, 80, 100][Math.floor(Math.random() * 6)];
+        case 2: // Multiplication
+          const a3 = Math.floor(Math.random() * 12) + 2;
+          const b3 = Math.floor(Math.random() * 12) + 2;
+          correctAnswer = a3 * b3;
+          question = `What is ${a3} × ${b3}?`;
+          break;
+          
+        case 3: // Division
+          const b4 = Math.floor(Math.random() * 10) + 2;
+          const a4 = b4 * (Math.floor(Math.random() * 10) + 2);
+          correctAnswer = a4 / b4;
+          question = `What is ${a4} ÷ ${b4}?`;
+          break;
+          
+        case 4: // Squares
+          const n = Math.floor(Math.random() * 15) + 2;
+          correctAnswer = n * n;
+          question = `What is ${n}² (${n} squared)?`;
+          break;
+          
+        case 5: // Percentage
+          const base = [20, 25, 40, 50, 80, 100][Math.floor(Math.random() * 6)];
           const percent = [10, 20, 25, 50, 75][Math.floor(Math.random() * 5)];
-          correctAnswer = (whole * percent) / 100;
-          question = `What is ${percent}% of ${whole}?`;
-          answers = this.generateAnswerOptions(correctAnswer);
-          break;
-          
-        case 3: // Sequences
-          const start = Math.floor(Math.random() * 10) + 1;
-          const step = [2, 3, 5][Math.floor(Math.random() * 3)];
-          const seq = [start, start + step, start + 2*step, start + 3*step];
-          correctAnswer = start + 4*step;
-          question = `What comes next in this sequence? ${seq.join(', ')}, ?`;
-          answers = this.generateAnswerOptions(correctAnswer);
-          break;
-          
-        case 4: // Word problems
-          const speed = [30, 40, 50, 60][Math.floor(Math.random() * 4)];
-          const time = [2, 3, 4][Math.floor(Math.random() * 3)];
-          correctAnswer = speed * time;
-          question = `A car travels at ${speed} km/h for ${time} hours. How far does it travel?`;
-          answers = this.generateAnswerOptions(correctAnswer, 'km');
+          correctAnswer = (base * percent) / 100;
+          question = `What is ${percent}% of ${base}?`;
           break;
       }
       
+      // Generate answer options
+      answers = [correctAnswer.toString()];
+      const offsets = [-3, -2, -1, 1, 2, 3, 5, 7, 10];
+      
+      while (answers.length < 4) {
+        const offset = offsets[Math.floor(Math.random() * offsets.length)];
+        const wrongAnswer = (correctAnswer + offset).toString();
+        if (!answers.includes(wrongAnswer) && parseFloat(wrongAnswer) > 0) {
+          answers.push(wrongAnswer);
+        }
+      }
+      
+      // Shuffle
+      for (let i = answers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [answers[i], answers[j]] = [answers[j], answers[i]];
+      }
+      
       questions.push({
-        question,
-        category,
-        answers,
-        correctAnswer: correctAnswer.toString(),
-        difficulty: 'medium'
+        question: question,
+        category: 'Math Challenge',
+        answers: answers,
+        correctAnswer: correctAnswer.toString()
       });
     }
     
     return questions;
-  },
-  
-  // Generate plausible wrong answers
-  generateAnswerOptions(correct, unit = '') {
-    const correctStr = correct.toString() + (unit ? ' ' + unit : '');
-    const options = [correctStr];
-    
-    // Generate 3 wrong answers
-    const offsets = [-5, -2, 3, 5, 7, 10];
-    while (options.length < 4) {
-      const offset = offsets[Math.floor(Math.random() * offsets.length)];
-      let wrong;
-      
-      if (Math.random() > 0.5) {
-        wrong = correct + offset;
-      } else {
-        wrong = Math.floor(correct * (1 + (offset / 10)));
-      }
-      
-      const wrongStr = wrong.toString() + (unit ? ' ' + unit : '');
-      if (!options.includes(wrongStr) && wrong > 0) {
-        options.push(wrongStr);
-      }
-    }
-    
-    // Shuffle options
-    for (let i = options.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [options[i], options[j]] = [options[j], options[i]];
-    }
-    
-    return options;
   },
   
   // Show current question
@@ -264,274 +149,180 @@ const game = {
     }
     
     this.currentQuestion = this.questions[this.currentQuestionIndex];
+    this.attempts = 0;
     this.answeredCorrectly = false;
     
-    // Update question text
-    const questionText = document.getElementById('question-text');
-    const categoryText = document.getElementById('category-text');
+    // Update UI
+    document.getElementById('question-count').textContent = (this.currentQuestionIndex + 1);
+    document.getElementById('category-badge').textContent = this.currentQuestion.category;
+    document.getElementById('question-text').textContent = this.currentQuestion.question;
     
-    if (questionText) {
-      questionText.setAttribute('value', this.currentQuestion.question);
-    }
+    // Create answer buttons
+    const container = document.getElementById('answers-container');
+    container.innerHTML = '';
     
-    if (categoryText) {
-      categoryText.setAttribute('value', 
-        `📚 ${this.currentQuestion.category} | Difficulty: ${this.currentQuestion.difficulty}`
-      );
-    }
+    this.currentQuestion.answers.forEach((answer, index) => {
+      const button = document.createElement('button');
+      button.className = 'answer-button';
+      button.textContent = `${String.fromCharCode(65 + index)}. ${answer}`;
+      button.onclick = () => this.checkAnswer(answer, button);
+      container.appendChild(button);
+    });
     
-    // Update answer options
-    for (let i = 0; i < 4; i++) {
-      const optionText = document.getElementById(`option-text-${i}`);
-      const optionBox = document.getElementById(`option-${i}`);
-      
-      if (optionText && this.currentQuestion.answers[i]) {
-        optionText.setAttribute('value', this.currentQuestion.answers[i]);
-      }
-      
-      // Reset color
-      if (optionBox) {
-        optionBox.setAttribute('color', '#2196F3');
-      }
-    }
+    // Hide next button
+    document.getElementById('next-button').style.display = 'none';
     
-    console.log(`❓ Question ${this.currentQuestionIndex + 1}:`, this.currentQuestion.question);
+    console.log(`❓ Question ${this.currentQuestionIndex + 1}: ${this.currentQuestion.question}`);
   },
   
-  // Check answer
-  checkAnswer(index) {
+  // Check answer - allows multiple attempts
+  checkAnswer(selectedAnswer, button) {
     if (this.answeredCorrectly) return; // Already answered correctly
     
-    const selectedAnswer = this.currentQuestion.answers[index];
+    this.attempts++;
     const isCorrect = selectedAnswer === this.currentQuestion.correctAnswer;
-    const optionBox = document.getElementById(`option-${index}`);
     
     if (isCorrect) {
       console.log('✅ Correct!');
       
       // Visual feedback
-      if (optionBox) {
-        optionBox.setAttribute('color', '#4CAF50');
-        
-        // Animation
-        optionBox.setAttribute('animation', 
-          'property: scale; to: 1.2 1.2 1.2; dur: 200; dir: alternate; loop: 2'
-        );
+      button.classList.add('correct');
+      
+      // Award points only on first attempt
+      if (this.attempts === 1) {
+        this.score += 10;
+        console.log('🎉 +10 points! (First try)');
+      } else {
+        console.log('✓ Correct, but no points (not first try)');
       }
       
-      // Update score
       this.answeredCorrectly = true;
-      this.score += 10 + (this.streak * 2);
-      this.streak++;
-      this.totalQuestions++;
       
-      this.updateScoreDisplay();
+      // Update score display
+      document.getElementById('score').textContent = this.score;
+      
+      // Disable all buttons
+      const buttons = document.querySelectorAll('.answer-button');
+      buttons.forEach(btn => btn.disabled = true);
       
       // Show next button
-      document.getElementById('next-btn').classList.remove('hide');
+      document.getElementById('next-button').style.display = 'block';
       
-      // Auto-advance after delay
+      // Auto-advance after 2 seconds
       setTimeout(() => {
-        this.nextQuestion();
+        if (this.answeredCorrectly) {
+          this.nextQuestion();
+        }
       }, 2000);
       
     } else {
-      console.log('❌ Incorrect');
+      console.log('❌ Try again!');
       
       // Visual feedback
-      if (optionBox) {
-        optionBox.setAttribute('color', '#f44336');
-        
-        // Shake animation
-        optionBox.setAttribute('animation', 
-          'property: position; to: ' + optionBox.getAttribute('position').x + ' ' + 
-          optionBox.getAttribute('position').y + ' 0.1; dur: 100; dir: alternate; loop: 3'
-        );
-        
-        // Reset color after animation
-        setTimeout(() => {
-          if (optionBox) {
-            optionBox.setAttribute('color', '#2196F3');
-          }
-        }, 600);
-      }
+      button.classList.add('wrong');
       
-      // Reset streak
-      this.streak = 0;
-      this.updateScoreDisplay();
+      // Remove wrong class after animation
+      setTimeout(() => {
+        button.classList.remove('wrong');
+      }, 500);
+      
+      // Don't disable button - user can try again!
     }
   },
   
   // Move to next question
   nextQuestion() {
-    document.getElementById('next-btn').classList.add('hide');
     this.currentQuestionIndex++;
     this.showQuestion();
   },
   
-  // Update score display
-  updateScoreDisplay() {
-    document.getElementById('score').textContent = this.score;
-    document.getElementById('streak').textContent = this.streak;
-    
-    const vrScore = document.getElementById('vr-score');
-    if (vrScore) {
-      vrScore.setAttribute('value', 
-        `Score: ${this.score} | Streak: ${this.streak}🔥`
-      );
-    }
-  },
-  
   // End game
   endGame() {
-    console.log('🎉 Game Over!');
+    document.getElementById('category-badge').textContent = 'Game Complete! 🎉';
+    document.getElementById('question-text').innerHTML = `
+      <strong>Congratulations!</strong><br><br>
+      Final Score: ${this.score} / ${this.totalQuestions * 10}<br>
+      You answered all ${this.totalQuestions} questions!<br><br>
+      <em>Close this popup to explore the environment more!</em>
+    `;
     
-    const questionText = document.getElementById('question-text');
-    const categoryText = document.getElementById('category-text');
+    document.getElementById('answers-container').innerHTML = '';
+    document.getElementById('next-button').style.display = 'none';
     
-    if (questionText) {
-      questionText.setAttribute('value', 
-        `🎉 Game Complete!\n\nFinal Score: ${this.score}\nQuestions Answered: ${this.totalQuestions}`
-      );
-    }
-    
-    if (categoryText) {
-      categoryText.setAttribute('value', 
-        `Great job! Click 'Start Math Challenge' to play again!`
-      );
-    }
-    
-    // Hide answer boxes
-    for (let i = 0; i < 4; i++) {
-      const box = document.getElementById(`option-${i}`);
-      if (box) box.setAttribute('visible', 'false');
-    }
-    
-    // Show start button again
-    document.getElementById('start-btn').classList.remove('hide');
-    document.getElementById('start-btn').textContent = '🔄 Play Again';
-  },
-  
-  // Set environment
-  setEnvironment(preset) {
-    console.log(`🌍 Setting environment: ${preset}`);
-    
-    const environment = document.getElementById('environment');
-    const sky = document.getElementById('main-sky');
-    const scene = document.querySelector('a-scene');
-    const particles = document.getElementById('particles');
-    
-    // Hide particles by default
-    if (particles) particles.setAttribute('visible', 'false');
-    
-    // Reset answer boxes visibility
-    for (let i = 0; i < 4; i++) {
-      const box = document.getElementById(`option-${i}`);
-      if (box) box.setAttribute('visible', 'true');
-    }
-    
-    switch(preset) {
-      case 'boulder':
-        if (environment) {
-          environment.setAttribute('visible', 'true');
-          environment.setAttribute('environment', {
-            preset: 'default',
-            dressingAmount: 50,
-            ground: 'hills',
-            groundTexture: 'walkernoise',
-            groundColor: '#5c4a3a',
-            groundColor2: '#3a2f26',
-            grid: 'none',
-            playArea: 2,
-            shadow: true,
-            lighting: 'distant',
-            lightPosition: {x: 0, y: 1, z: -0.2},
-            fog: 0.5
-          });
-        }
-        if (sky) sky.setAttribute('color', '#87CEEB');
-        if (scene) {
-          scene.setAttribute('fog', 'type: linear; color: #87CEEB; near: 30; far: 100');
-        }
-        break;
-        
-      case 'hawaii':
-        if (environment) {
-          environment.setAttribute('visible', 'true');
-          environment.setAttribute('environment', {
-            preset: 'yavapai',
-            dressingAmount: 100,
-            ground: 'flat',
-            groundTexture: 'squares',
-            groundColor: '#f4e4c1',
-            groundColor2: '#e0d4b1',
-            grid: 'none',
-            playArea: 2,
-            shadow: true,
-            lighting: 'point',
-            fog: 0.3
-          });
-        }
-        if (sky) sky.setAttribute('color', '#87CEEB');
-        if (scene) {
-          scene.setAttribute('fog', 'type: linear; color: #87CEEB; near: 50; far: 150');
-        }
-        break;
-        
-      case 'space':
-        if (environment) {
-          environment.setAttribute('visible', 'false');
-        }
-        if (sky) sky.setAttribute('color', '#000010');
-        if (scene) {
-          scene.setAttribute('fog', 'type: linear; color: #000010; near: 50; far: 200');
-        }
-        // Add particle system for stars
-        if (particles) {
-          particles.setAttribute('visible', 'true');
-          particles.setAttribute('particle-system', {
-            preset: 'dust',
-            particleCount: 2000,
-            color: '#ffffff,#aaaaff',
-            size: 0.8,
-            opacity: 0.8
-          });
-        }
-        break;
-        
-      case 'forest':
-        if (environment) {
-          environment.setAttribute('visible', 'true');
-          environment.setAttribute('environment', {
-            preset: 'forest',
-            dressingAmount: 100,
-            ground: 'hills',
-            groundTexture: 'walkernoise',
-            groundColor: '#2a4a2a',
-            groundColor2: '#1a3a1a',
-            grid: 'none',
-            playArea: 2,
-            shadow: true,
-            lighting: 'distant',
-            fog: 0.8
-          });
-        }
-        if (sky) sky.setAttribute('color', '#5a7a5a');
-        if (scene) {
-          scene.setAttribute('fog', 'type: linear; color: #5a7a5a; near: 20; far: 80');
-        }
-        break;
-    }
+    console.log('🎉 Game complete!');
   }
 };
 
-// Initialize game when DOM is loaded
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => game.init());
-} else {
-  game.init();
+// =============================================
+// UI Functions
+// =============================================
+
+function enterGame() {
+  // Hide entrance screen
+  document.getElementById('entrance-screen').classList.add('hidden');
+  
+  // Load questions
+  game.loadQuestions().then(() => {
+    // Show popup after 1 second
+    setTimeout(() => {
+      document.getElementById('question-popup').classList.add('visible');
+      game.showQuestion();
+    }, 1000);
+  });
+  
+  console.log('🎮 Game started!');
 }
 
-// Export for use in HTML
-window.game = game;
+function minimizePopup() {
+  const popup = document.getElementById('question-popup');
+  const icon = document.getElementById('question-icon');
+  
+  popup.classList.add('minimized');
+  icon.classList.add('visible');
+  
+  console.log('➖ Popup minimized - explore the environment!');
+}
 
+function maximizePopup() {
+  const popup = document.getElementById('question-popup');
+  const icon = document.getElementById('question-icon');
+  
+  popup.classList.remove('minimized');
+  icon.classList.remove('visible');
+  
+  console.log('➕ Popup restored - continue where you left off!');
+}
+
+function nextQuestion() {
+  game.nextQuestion();
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+  game.init();
+});
+
+// VR Controller Support
+document.addEventListener('DOMContentLoaded', () => {
+  const scene = document.querySelector('a-scene');
+  
+  if (scene) {
+    scene.addEventListener('loaded', () => {
+      console.log('🥽 VR Scene loaded');
+      
+      // Add VR controller support
+      const rig = document.getElementById('rig');
+      
+      if (rig) {
+        // Listen for VR mode changes
+        scene.addEventListener('enter-vr', () => {
+          console.log('🥽 Entered VR mode - use joystick to move!');
+        });
+        
+        scene.addEventListener('exit-vr', () => {
+          console.log('👋 Exited VR mode');
+        });
+      }
+    });
+  }
+});
