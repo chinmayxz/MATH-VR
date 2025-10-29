@@ -16,7 +16,6 @@ const game = {
   init() {
     console.log('🎮 Math VR Initialized');
     this.setupVRDetection();
-    this.setupVRClickHandlers();
   },
   
   // Detect VR mode changes
@@ -74,39 +73,60 @@ const game = {
   
   // Setup VR click handlers
   setupVRClickHandlers() {
+    console.log('🎮 Setting up VR click handlers...');
+    
     // Answer buttons
     for (let i = 0; i < 4; i++) {
       const box = document.getElementById(`vr-answer-${i}`);
       if (box) {
+        // Remove old listeners
+        box.removeAttribute('data-setup');
+        
+        // Add click event
         box.addEventListener('click', () => {
+          console.log(`Clicked answer ${i}`);
           if (this.currentQuestion && !this.answeredCorrectly) {
             this.checkAnswer(this.currentQuestion.answers[i], null, i);
           }
         });
+        
+        // Add hover feedback (console log for debugging)
+        box.addEventListener('mouseenter', () => {
+          console.log(`Hovering over answer ${i}`);
+        });
+        
+        box.setAttribute('data-setup', 'true');
       }
     }
     
     // Minimize button
     const minBtn = document.getElementById('vr-minimize');
-    if (minBtn) {
+    if (minBtn && !minBtn.hasAttribute('data-setup')) {
       minBtn.addEventListener('click', () => {
+        console.log('Minimize clicked');
         const vrPopup = document.getElementById('vr-popup');
         const vrIcon = document.getElementById('vr-icon');
         if (vrPopup) vrPopup.setAttribute('visible', 'false');
         if (vrIcon) vrIcon.setAttribute('visible', 'true');
       });
+      minBtn.setAttribute('data-setup', 'true');
     }
     
     // Restore icon
     const icon = document.getElementById('vr-icon');
-    if (icon) {
-      icon.addEventListener('click', () => {
+    const iconSphere = icon ? icon.querySelector('a-sphere') : null;
+    if (iconSphere && !iconSphere.hasAttribute('data-setup')) {
+      iconSphere.addEventListener('click', () => {
+        console.log('Restore clicked');
         const vrPopup = document.getElementById('vr-popup');
         const vrIcon = document.getElementById('vr-icon');
         if (vrPopup) vrPopup.setAttribute('visible', 'true');
         if (vrIcon) vrIcon.setAttribute('visible', 'false');
       });
+      iconSphere.setAttribute('data-setup', 'true');
     }
+    
+    console.log('✅ VR click handlers setup complete');
   },
   
   // Update VR display with current question
@@ -464,4 +484,17 @@ function nextQuestion() {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   game.init();
+  
+  // Wait for A-Frame scene to load before setting up VR handlers
+  const scene = document.querySelector('a-scene');
+  if (scene) {
+    if (scene.hasLoaded) {
+      game.setupVRClickHandlers();
+    } else {
+      scene.addEventListener('loaded', () => {
+        console.log('🎬 A-Frame scene loaded');
+        game.setupVRClickHandlers();
+      });
+    }
+  }
 });
