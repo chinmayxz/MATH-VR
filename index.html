@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Math Trivia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #startScreen, #categoryScreen, #gameScreen, #resultsScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            pointer-events: all;
+            box-shadow: 0 10px 50px rgba(0, 255, 255, 0.3);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            max-width: 600px;
+        }
+        h1 {
+            color: #00ffff;
+            margin: 0 0 20px 0;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        h2 {
+            color: #00ddff;
+            margin: 0 0 20px 0;
+            font-size: 1.8em;
+        }
+        button {
+            background: linear-gradient(135deg, #0066cc, #00ccff);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 200, 255, 0.4);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 200, 255, 0.6);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .category-btn {
+            display: block;
+            width: 100%;
+            margin: 15px 0;
+        }
+        #question {
+            color: #ffffff;
+            font-size: 1.4em;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+        .answer-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #1a5080, #2a7090);
+        }
+        .answer-btn.correct {
+            background: linear-gradient(135deg, #00aa00, #00ff00);
+        }
+        .answer-btn.incorrect {
+            background: linear-gradient(135deg, #aa0000, #ff0000);
+        }
+        #score {
+            color: #ffff00;
+            font-size: 1.3em;
+            margin: 10px 0;
+            text-shadow: 0 0 5px #ffff00;
+        }
+        #progress {
+            color: #aaddff;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        p {
+            color: #aaddff;
+            font-size: 1.1em;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div id="startScreen">
+            <h1>🌊 VR Math Trivia 🌊</h1>
+            <p>Test your math knowledge in a stunning waterfall environment!</p>
+            <button onclick="showCategories()">Start Game</button>
+        </div>
+
+        <div id="categoryScreen" class="hidden">
+            <h2>Choose Your Category</h2>
+            <button class="category-btn" onclick="startGame('geometry')">📐 Geometry</button>
+            <button class="category-btn" onclick="startGame('algebra')">🔢 Algebra</button>
+            <button class="category-btn" onclick="startGame('calculus')">📊 Calculus</button>
+        </div>
+
+        <div id="gameScreen" class="hidden">
+            <div id="score">Score: 0</div>
+            <div id="progress">Question 1/10</div>
+            <div id="question"></div>
+            <div id="answers"></div>
+        </div>
+
+        <div id="resultsScreen" class="hidden">
+            <h1>Round Complete! 🎉</h1>
+            <div id="finalScore"></div>
+            <button onclick="showCategories()">Play Again</button>
+            <button onclick="location.reload()">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer;
+        let score = 0;
+        let currentQuestion = 0;
+        let attempted = false;
+        let currentCategory = '';
+
+        const questions = {
+            geometry: [
+                {q: "What is the sum of angles in a triangle?", a: ["180°", "360°", "90°", "270°"], c: 0},
+                {q: "How many sides does a hexagon have?", a: ["5", "6", "7", "8"], c: 1},
+                {q: "What is the area of a circle with radius 5? (Use π ≈ 3.14)", a: ["78.5", "31.4", "15.7", "157"], c: 0},
+                {q: "What is the perimeter of a square with side 4?", a: ["8", "12", "16", "20"], c: 2},
+                {q: "How many faces does a cube have?", a: ["4", "6", "8", "12"], c: 1},
+                {q: "What is the volume of a cube with side 3?", a: ["9", "18", "27", "81"], c: 2},
+                {q: "What is the sum of angles in a quadrilateral?", a: ["180°", "270°", "360°", "450°"], c: 2},
+                {q: "What is the diagonal of a square with side 1?", a: ["1", "√2", "2", "√3"], c: 1},
+                {q: "How many edges does a cylinder have?", a: ["0", "1", "2", "3"], c: 2},
+                {q: "What is the area of a rectangle with length 5 and width 3?", a: ["8", "15", "30", "25"], c: 1},
+                {q: "What is the circumference of a circle with radius 2? (Use π ≈ 3.14)", a: ["6.28", "12.56", "3.14", "9.42"], c: 1},
+                {q: "How many vertices does a pyramid with square base have?", a: ["4", "5", "6", "8"], c: 1},
+                {q: "What is the area of a triangle with base 6 and height 4?", a: ["10", "12", "24", "48"], c: 1},
+                {q: "What type of triangle has all sides equal?", a: ["Isosceles", "Equilateral", "Scalene", "Right"], c: 1},
+                {q: "How many degrees in a straight angle?", a: ["90°", "180°", "270°", "360°"], c: 1}
+            ],
+            algebra: [
+                {q: "Solve for x: 2x + 5 = 15", a: ["5", "10", "7.5", "20"], c: 0},
+                {q: "What is x² when x = 4?", a: ["8", "16", "12", "20"], c: 1},
+                {q: "Simplify: 3x + 2x", a: ["5x", "6x", "5x²", "x⁵"], c: 0},
+                {q: "What is the value of 2³?", a: ["6", "8", "9", "12"], c: 1},
+                {q: "Solve: x/3 = 6", a: ["2", "9", "18", "3"], c: 2},
+                {q: "What is √49?", a: ["6", "7", "8", "9"], c: 1},
+                {q: "Simplify: (x²)(x³)", a: ["x⁵", "x⁶", "x⁹", "2x⁵"], c: 0},
+                {q: "Solve for x: 3x - 7 = 14", a: ["5", "6", "7", "8"], c: 2},
+                {q: "What is 5² - 3²?", a: ["4", "8", "16", "32"], c: 2},
+                {q: "Factor: x² - 9", a: ["(x-3)(x-3)", "(x+3)(x+3)", "(x-3)(x+3)", "x(x-9)"], c: 2},
+                {q: "Solve: 4x = 28", a: ["4", "7", "24", "32"], c: 1},
+                {q: "What is (-2)³?", a: ["6", "-6", "8", "-8"], c: 3},
+                {q: "Simplify: 2(x + 3)", a: ["2x + 3", "2x + 6", "x + 6", "2x + 5"], c: 1},
+                {q: "What is the slope of y = 3x + 2?", a: ["2", "3", "5", "x"], c: 1},
+                {q: "Solve: x + 8 = 15", a: ["7", "8", "23", "15"], c: 0}
+            ],
+            calculus: [
+                {q: "What is the derivative of x²?", a: ["x", "2x", "x²", "2"], c: 1},
+                {q: "What is ∫x dx?", a: ["x", "x²", "x²/2 + C", "2x"], c: 2},
+                {q: "What is the derivative of a constant?", a: ["1", "0", "x", "Undefined"], c: 1},
+                {q: "What is the derivative of 3x?", a: ["3", "3x", "x", "0"], c: 0},
+                {q: "What is lim(x→0) sin(x)/x?", a: ["0", "1", "∞", "Undefined"], c: 1},
+                {q: "What is the derivative of eˣ?", a: ["eˣ", "xeˣ⁻¹", "ln(x)", "1/x"], c: 0},
+                {q: "What is ∫1 dx?", a: ["0", "1", "x + C", "x"], c: 2},
+                {q: "What is the derivative of ln(x)?", a: ["1", "1/x", "x", "ln(x)"], c: 1},
+                {q: "What is the derivative of sin(x)?", a: ["cos(x)", "-cos(x)", "sin(x)", "-sin(x)"], c: 0},
+                {q: "What is ∫2x dx?", a: ["2x", "x²", "x² + C", "2x² + C"], c: 2},
+                {q: "What is the power rule for derivatives of xⁿ?", a: ["nxⁿ", "nxⁿ⁻¹", "xⁿ⁻¹", "xⁿ/n"], c: 1},
+                {q: "What is the derivative of x³?", a: ["3x", "3x²", "x²", "3x³"], c: 1},
+                {q: "What is the derivative of cos(x)?", a: ["sin(x)", "-sin(x)", "cos(x)", "-cos(x)"], c: 1},
+                {q: "What does ∫f'(x)dx equal?", a: ["f'(x)", "f(x) + C", "0", "f''(x)"], c: 1},
+                {q: "What is the derivative of 5x²?", a: ["5x", "10x", "5x²", "10"], c: 1}
+            ]
+        };
+
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.Fog(0x87ceeb, 50, 200);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 10, 30);
+            camera.lookAt(0, 5, 0);
+
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(50, 50, 50);
+            scene.add(directionalLight);
+
+            // Water pool
+            const poolGeometry = new THREE.CylinderGeometry(25, 25, 1, 32);
+            const poolMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1e90ff,
+                transparent: true,
+                opacity: 0.7,
+                shininess: 100
+            });
+            const pool = new THREE.Mesh(poolGeometry, poolMaterial);
+            pool.position.y = 0;
+            scene.add(pool);
+
+            // Cliffs
+            for (let i = 0; i < 3; i++) {
+                const cliffGeometry = new THREE.BoxGeometry(15, 40, 15);
+                const cliffMaterial = new THREE.MeshPhongMaterial({color: 0x808080});
+                const cliff = new THREE.Mesh(cliffGeometry, cliffMaterial);
+                cliff.position.set(
+                    Math.cos(i * Math.PI * 2 / 3) * 30,
+                    20,
+                    Math.sin(i * Math.PI * 2 / 3) * 30
+                );
+                scene.add(cliff);
+            }
+
+            // Waterfall particles
+            const particleCount = 1000;
+            const particles = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 60;
+                positions[i + 1] = Math.random() * 50 + 10;
+                positions[i + 2] = (Math.random() - 0.5) * 60;
+            }
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.3,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const particleSystem = new THREE.Points(particles, particleMaterial);
+            scene.add(particleSystem);
+
+            // Trees
+            for (let i = 0; i < 15; i++) {
+                const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 8, 8);
+                const trunkMaterial = new THREE.MeshPhongMaterial({color: 0x8b4513});
+                const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+                
+                const leavesGeometry = new THREE.SphereGeometry(3, 8, 8);
+                const leavesMaterial = new THREE.MeshPhongMaterial({color: 0x228b22});
+                const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+                leaves.position.y = 6;
+                
+                trunk.add(leaves);
+                
+                const angle = (i / 15) * Math.PI * 2;
+                const radius = 35 + Math.random() * 10;
+                trunk.position.set(
+                    Math.cos(angle) * radius,
+                    4,
+                    Math.sin(angle) * radius
+                );
+                
+                scene.add(trunk);
+            }
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const particles = scene.children.find(child => child instanceof THREE.Points);
+            if (particles) {
+                const positions = particles.geometry.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] -= 0.3;
+                    if (positions[i] < 0) {
+                        positions[i] = 60;
+                    }
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+            }
+            
+            camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
+            camera.lookAt(0, 5, 0);
+            
+            renderer.render(scene, camera);
+        }
+
+        function showCategories() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.add('hidden');
+            document.getElementById('categoryScreen').classList.remove('hidden');
+        }
+
+        function startGame(category) {
+            currentCategory = category;
+            score = 0;
+            currentQuestion = 0;
+            
+            document.getElementById('categoryScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestion >= 10) {
+                showResults();
+                return;
+            }
+
+            attempted = false;
+            
+            const categoryQuestions = questions[currentCategory];
+            const randomQ = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
+            
+            document.getElementById('question').textContent = randomQ.q;
+            document.getElementById('progress').textContent = `Question ${currentQuestion + 1}/10`;
+            document.getElementById('score').textContent = `Score: ${score}`;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            
+            randomQ.a.forEach((answer, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index, randomQ.c, btn);
+                answersDiv.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, correct, btn) {
+            if (selected === correct) {
+                btn.classList.add('correct');
+                if (!attempted) {
+                    score += 10;
+                    document.getElementById('score').textContent = `Score: ${score}`;
+                }
+                setTimeout(() => {
+                    currentQuestion++;
+                    loadQuestion();
+                }, 1000);
+            } else {
+                btn.classList.add('incorrect');
+                attempted = true;
+                setTimeout(() => {
+                    btn.classList.remove('incorrect');
+                }, 500);
+            }
+        }
+
+        function showResults() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('finalScore').textContent = `Final Score: ${score}/100`;
+            document.getElementById('resultsScreen').classList.remove('hidden');
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        initScene();
+    </script>
+</body>
+</html>
