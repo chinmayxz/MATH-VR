@@ -242,39 +242,59 @@
             renderer.xr.enabled = true;
             document.body.appendChild(renderer.domElement);
 
-            // Setup VR Button with proper WebXR session
+            // Setup VR Button - works in VR mode or as fullscreen fallback
             vrButton = document.getElementById('vrButton');
             vrButton.addEventListener('click', async () => {
-                if (!renderer.xr.isPresenting) {
-                    try {
-                        const sessionInit = {
-                            optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'layers']
-                        };
-                        const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
-                        await renderer.xr.setSession(session);
-                        vrButton.textContent = '🥽 EXIT VR MODE';
-                    } catch (error) {
-                        console.error('Error starting VR session:', error);
-                        alert('Unable to start VR session. Please make sure:\n1. You are using a VR-capable browser\n2. Your VR headset is connected\n3. You have granted VR permissions');
-                    }
-                } else {
+                if (renderer.xr.isPresenting) {
+                    // Exit VR
                     renderer.xr.getSession().end();
                     vrButton.textContent = '🥽 ENTER VR MODE';
+                } else {
+                    // Try to enter VR
+                    if (navigator.xr) {
+                        try {
+                            const sessionInit = {
+                                optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                            };
+                            const session = await navigator.xr.requestSession('immersive-vr', sessionInit);
+                            await renderer.xr.setSession(session);
+                            vrButton.textContent = '🥽 EXIT VR MODE';
+                        } catch (error) {
+                            console.log('WebXR not available, entering fullscreen immersive mode');
+                            enterFullscreenMode();
+                        }
+                    } else {
+                        // Fallback to fullscreen immersive mode
+                        enterFullscreenMode();
+                    }
                 }
             });
 
-            // Check VR support
-            if (navigator.xr) {
-                navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-                    if (!supported) {
-                        vrButton.textContent = 'VR NOT SUPPORTED';
-                        vrButton.disabled = true;
-                    }
-                });
-            } else {
-                vrButton.textContent = 'WEBXR NOT AVAILABLE';
-                vrButton.disabled = true;
+            function enterFullscreenMode() {
+                // Enter fullscreen for immersive experience
+                if (renderer.domElement.requestFullscreen) {
+                    renderer.domElement.requestFullscreen();
+                } else if (renderer.domElement.webkitRequestFullscreen) {
+                    renderer.domElement.webkitRequestFullscreen();
+                } else if (renderer.domElement.mozRequestFullScreen) {
+                    renderer.domElement.mozRequestFullScreen();
+                }
+                
+                vrButton.textContent = '🥽 IN IMMERSIVE MODE';
+                
+                // Enhance the experience for non-VR immersive mode
+                camera.fov = 90; // Wider field of view for immersion
+                camera.updateProjectionMatrix();
             }
+
+            // Listen for fullscreen changes
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement && !renderer.xr.isPresenting) {
+                    vrButton.textContent = '🥽 ENTER VR MODE';
+                    camera.fov = 75;
+                    camera.updateProjectionMatrix();
+                }
+            });
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
