@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VR Math Trivia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/webxr-polyfill@latest/build/webxr-polyfill.js"></script>
     <style>
         body {
             margin: 0;
@@ -107,37 +109,19 @@
             margin: 15px 0;
         }
         #vrButton {
-            position: fixed;
-            bottom: 20px;
+            position: absolute;
+            top: 20px;
             right: 20px;
-            padding: 15px 25px;
-            background: linear-gradient(135deg, #ff00ff, #00ffff);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            cursor: pointer;
             pointer-events: all;
-            box-shadow: 0 4px 20px rgba(255, 0, 255, 0.5);
-            transition: all 0.3s;
-            z-index: 1000;
+            background: linear-gradient(135deg, #8a2be2, #9370db);
+            z-index: 100;
         }
         #vrButton:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 25px rgba(255, 0, 255, 0.7);
-        }
-        #vrButton:disabled {
-            background: #666;
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-        canvas {
-            display: block;
+            background: linear-gradient(135deg, #9b30ff, #a07aff);
         }
     </style>
 </head>
 <body>
-    <button id="vrButton">🥽 Enter VR</button>
     <div id="ui">
         <div id="startScreen">
             <h1>🌊 VR Math Trivia 🌊</h1>
@@ -165,18 +149,17 @@
             <button onclick="showCategories()">Play Again</button>
             <button onclick="location.reload()">Main Menu</button>
         </div>
+        
+        <button id="vrButton" class="hidden" onclick="enterVR()">Enter VR Mode</button>
     </div>
 
-    <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
-        import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js';
-
-        let scene, camera, renderer, vrButton;
+    <script>
+        let scene, camera, renderer;
         let score = 0;
         let currentQuestion = 0;
         let attempted = false;
         let currentCategory = '';
-        let uiMesh, uiCanvas, uiContext;
+        let vrSession = null;
 
         const questions = {
             geometry: [
@@ -243,49 +226,15 @@
 
             renderer = new THREE.WebGLRenderer({antialias: true});
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.xr.enabled = true;
             document.body.appendChild(renderer.domElement);
 
-            // Replace default VR button with custom one
-            const customVRButton = document.getElementById('vrButton');
-            
-            // Check VR support
-            if (navigator.xr) {
+            // Check for WebXR support and show VR button if available
+            if ('xr' in navigator) {
                 navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
                     if (supported) {
-                        customVRButton.onclick = async () => {
-                            if (!renderer.xr.isPresenting) {
-                                const session = await navigator.xr.requestSession('immersive-vr', {
-                                    optionalFeatures: ['local-floor', 'bounded-floor']
-                                });
-                                renderer.xr.setSession(session);
-                                customVRButton.textContent = 'Exit VR';
-                            } else {
-                                renderer.xr.getSession().end();
-                            }
-                        };
-
-                        renderer.xr.addEventListener('sessionstart', () => {
-                            customVRButton.textContent = 'Exit VR';
-                            document.getElementById('ui').style.display = 'none';
-                            createVRUI();
-                        });
-
-                        renderer.xr.addEventListener('sessionend', () => {
-                            customVRButton.textContent = '🥽 Enter VR';
-                            document.getElementById('ui').style.display = 'block';
-                            if (uiMesh) {
-                                scene.remove(uiMesh);
-                            }
-                        });
-                    } else {
-                        customVRButton.textContent = 'VR Not Supported';
-                        customVRButton.disabled = true;
+                        document.getElementById('vrButton').classList.remove('hidden');
                     }
                 });
-            } else {
-                customVRButton.textContent = 'WebXR Not Available';
-                customVRButton.disabled = true;
             }
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -367,166 +316,12 @@
                 scene.add(trunk);
             }
 
-            renderer.setAnimationLoop(animate);
-        }
-
-        function createVRUI() {
-            // Create a canvas for the UI
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024;
-            canvas.height = 1024;
-            uiCanvas = canvas;
-            uiContext = canvas.getContext('2d');
-
-            // Create texture from canvas
-            const texture = new THREE.CanvasTexture(canvas);
-            
-            // Create plane for UI
-            const geometry = new THREE.PlaneGeometry(3, 3);
-            const material = new THREE.MeshBasicMaterial({
-                map: texture,
-                transparent: true,
-                side: THREE.DoubleSide
-            });
-            
-            uiMesh = new THREE.Mesh(geometry, material);
-            uiMesh.position.set(0, 8, -5);
-            scene.add(uiMesh);
-
-            // Draw current UI state
-            updateVRUI();
-        }
-
-        function updateVRUI() {
-            if (!uiContext) return;
-
-            const ctx = uiContext;
-            const canvas = uiCanvas;
-
-            // Clear canvas
-            ctx.fillStyle = 'rgba(0, 20, 40, 0.95)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw border
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-            // Get current screen state
-            const startScreen = document.getElementById('startScreen');
-            const categoryScreen = document.getElementById('categoryScreen');
-            const gameScreen = document.getElementById('gameScreen');
-            const resultsScreen = document.getElementById('resultsScreen');
-
-            ctx.textAlign = 'center';
-            ctx.font = 'bold 60px Arial';
-
-            if (!startScreen.classList.contains('hidden')) {
-                // Start screen
-                ctx.fillStyle = '#00ffff';
-                ctx.shadowColor = '#00ffff';
-                ctx.shadowBlur = 20;
-                ctx.fillText('🌊 VR Math Trivia 🌊', canvas.width / 2, 200);
-                ctx.shadowBlur = 0;
-                
-                ctx.font = '40px Arial';
-                ctx.fillStyle = '#aaddff';
-                ctx.fillText('Test your math knowledge in VR!', canvas.width / 2, 350);
-                
-                ctx.font = 'bold 50px Arial';
-                ctx.fillStyle = '#00ccff';
-                ctx.fillText('👉 Click Start Game on Screen 👈', canvas.width / 2, 550);
-            } else if (!categoryScreen.classList.contains('hidden')) {
-                // Category screen
-                ctx.fillStyle = '#00ddff';
-                ctx.fillText('Choose Your Category', canvas.width / 2, 180);
-                
-                ctx.font = 'bold 55px Arial';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText('📐 Geometry', canvas.width / 2, 350);
-                ctx.fillText('🔢 Algebra', canvas.width / 2, 500);
-                ctx.fillText('📊 Calculus', canvas.width / 2, 650);
-                
-                ctx.font = '35px Arial';
-                ctx.fillStyle = '#aaddff';
-                ctx.fillText('Select on your screen', canvas.width / 2, 850);
-            } else if (!gameScreen.classList.contains('hidden')) {
-                // Game screen
-                const scoreText = document.getElementById('score').textContent;
-                const progressText = document.getElementById('progress').textContent;
-                const questionText = document.getElementById('question').textContent;
-                const answersDiv = document.getElementById('answers');
-
-                ctx.fillStyle = '#ffff00';
-                ctx.shadowColor = '#ffff00';
-                ctx.shadowBlur = 10;
-                ctx.font = 'bold 45px Arial';
-                ctx.fillText(scoreText, canvas.width / 2, 100);
-                ctx.shadowBlur = 0;
-                
-                ctx.fillStyle = '#aaddff';
-                ctx.font = '35px Arial';
-                ctx.fillText(progressText, canvas.width / 2, 160);
-                
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 38px Arial';
-                
-                // Word wrap question
-                const words = questionText.split(' ');
-                let line = '';
-                let y = 280;
-                for (let word of words) {
-                    const testLine = line + word + ' ';
-                    const metrics = ctx.measureText(testLine);
-                    if (metrics.width > 900 && line !== '') {
-                        ctx.fillText(line, canvas.width / 2, y);
-                        line = word + ' ';
-                        y += 50;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                ctx.fillText(line, canvas.width / 2, y);
-                
-                // Draw answers
-                ctx.font = '32px Arial';
-                y += 100;
-                const answers = answersDiv.querySelectorAll('.answer-btn');
-                answers.forEach((btn, i) => {
-                    if (btn.classList.contains('correct')) {
-                        ctx.fillStyle = '#00ff00';
-                    } else if (btn.classList.contains('incorrect')) {
-                        ctx.fillStyle = '#ff0000';
-                    } else {
-                        ctx.fillStyle = '#2a7090';
-                    }
-                    ctx.fillText(`${String.fromCharCode(65 + i)}) ${btn.textContent}`, canvas.width / 2, y + (i * 70));
-                });
-            } else if (!resultsScreen.classList.contains('hidden')) {
-                // Results screen
-                ctx.fillStyle = '#00ffff';
-                ctx.shadowColor = '#00ffff';
-                ctx.shadowBlur = 20;
-                ctx.fillText('Round Complete! 🎉', canvas.width / 2, 250);
-                ctx.shadowBlur = 0;
-                
-                const finalScoreText = document.getElementById('finalScore').textContent;
-                ctx.fillStyle = '#ffff00';
-                ctx.font = 'bold 70px Arial';
-                ctx.fillText(finalScoreText, canvas.width / 2, 450);
-                
-                ctx.font = '40px Arial';
-                ctx.fillStyle = '#aaddff';
-                ctx.fillText('Use screen to play again', canvas.width / 2, 650);
-            }
-
-            // Update texture
-            if (uiMesh) {
-                uiMesh.material.map.needsUpdate = true;
-            }
+            animate();
         }
 
         function animate() {
+            requestAnimationFrame(animate);
+            
             const particles = scene.children.find(child => child instanceof THREE.Points);
             if (particles) {
                 const positions = particles.geometry.attributes.position.array;
@@ -539,28 +334,41 @@
                 particles.geometry.attributes.position.needsUpdate = true;
             }
             
-            // Only auto-rotate camera in non-VR mode
-            if (!renderer.xr.isPresenting) {
-                camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
-                camera.lookAt(0, 5, 0);
-            }
-
-            // Update VR UI if in VR mode
-            if (renderer.xr.isPresenting && uiMesh) {
-                updateVRUI();
-            }
+            camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
+            camera.lookAt(0, 5, 0);
             
             renderer.render(scene, camera);
         }
 
-        window.showCategories = function() {
+        function enterVR() {
+            if (!navigator.xr) {
+                alert('WebXR not supported in this browser');
+                return;
+            }
+
+            const sessionInit = { optionalFeatures: ['local-floor', 'bounded-floor'] };
+            
+            navigator.xr.requestSession('immersive-vr', sessionInit).then((session) => {
+                vrSession = session;
+                renderer.xr.setSession(session);
+                document.getElementById('vrButton').textContent = 'Exit VR';
+                
+                session.addEventListener('end', onVRSessionEnded);
+            });
+        }
+
+        function onVRSessionEnded() {
+            vrSession = null;
+            document.getElementById('vrButton').textContent = 'Enter VR Mode';
+        }
+
+        function showCategories() {
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('resultsScreen').classList.add('hidden');
             document.getElementById('categoryScreen').classList.remove('hidden');
-            if (renderer.xr.isPresenting) updateVRUI();
         }
 
-        window.startGame = function(category) {
+        function startGame(category) {
             currentCategory = category;
             score = 0;
             currentQuestion = 0;
@@ -596,8 +404,6 @@
                 btn.onclick = () => checkAnswer(index, randomQ.c, btn);
                 answersDiv.appendChild(btn);
             });
-
-            if (renderer.xr.isPresenting) updateVRUI();
         }
 
         function checkAnswer(selected, correct, btn) {
@@ -607,7 +413,6 @@
                     score += 10;
                     document.getElementById('score').textContent = `Score: ${score}`;
                 }
-                if (renderer.xr.isPresenting) updateVRUI();
                 setTimeout(() => {
                     currentQuestion++;
                     loadQuestion();
@@ -615,10 +420,8 @@
             } else {
                 btn.classList.add('incorrect');
                 attempted = true;
-                if (renderer.xr.isPresenting) updateVRUI();
                 setTimeout(() => {
                     btn.classList.remove('incorrect');
-                    if (renderer.xr.isPresenting) updateVRUI();
                 }, 500);
             }
         }
@@ -627,7 +430,6 @@
             document.getElementById('gameScreen').classList.add('hidden');
             document.getElementById('finalScore').textContent = `Final Score: ${score}/100`;
             document.getElementById('resultsScreen').classList.remove('hidden');
-            if (renderer.xr.isPresenting) updateVRUI();
         }
 
         window.addEventListener('resize', () => {
