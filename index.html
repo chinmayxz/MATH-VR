@@ -4,12 +4,107 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VR Math Trivia</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             font-family: 'Arial', sans-serif;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #startScreen, #categoryScreen, #gameScreen, #resultsScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            pointer-events: all;
+            box-shadow: 0 10px 50px rgba(0, 255, 255, 0.3);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            max-width: 600px;
+        }
+        h1 {
+            color: #00ffff;
+            margin: 0 0 20px 0;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        h2 {
+            color: #00ddff;
+            margin: 0 0 20px 0;
+            font-size: 1.8em;
+        }
+        button {
+            background: linear-gradient(135deg, #0066cc, #00ccff);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 200, 255, 0.4);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 200, 255, 0.6);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .category-btn {
+            display: block;
+            width: 100%;
+            margin: 15px 0;
+        }
+        #question {
+            color: #ffffff;
+            font-size: 1.4em;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+        .answer-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 15px 20px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #1a5080, #2a7090);
+        }
+        .answer-btn.correct {
+            background: linear-gradient(135deg, #00aa00, #00ff00);
+        }
+        .answer-btn.incorrect {
+            background: linear-gradient(135deg, #aa0000, #ff0000);
+        }
+        #score {
+            color: #ffff00;
+            font-size: 1.3em;
+            margin: 10px 0;
+            text-shadow: 0 0 5px #ffff00;
+        }
+        #progress {
+            color: #aaddff;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+        p {
+            color: #aaddff;
+            font-size: 1.1em;
+            margin: 15px 0;
         }
         #vrButton {
             position: fixed;
@@ -22,69 +117,84 @@
             border-radius: 10px;
             font-size: 1.1em;
             cursor: pointer;
+            pointer-events: all;
             box-shadow: 0 4px 20px rgba(255, 0, 255, 0.5);
             transition: all 0.3s;
             z-index: 1000;
-            font-weight: bold;
         }
         #vrButton:hover {
             transform: translateY(-3px);
             box-shadow: 0 6px 25px rgba(255, 0, 255, 0.7);
         }
-        #instructions {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 0.9em;
-            z-index: 999;
+        #vrButton:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
         }
-        .vr-mode #instructions {
-            display: none;
+        canvas {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <button id="vrButton">🥽 ENTER VR MODE</button>
-    <div id="instructions">Drag to look around • Click VR button for 360° immersive view</div>
+    <button id="vrButton">🥽 Enter VR</button>
+    <div id="ui">
+        <div id="startScreen">
+            <h1>🌊 VR Math Trivia 🌊</h1>
+            <p>Test your math knowledge in a stunning waterfall environment!</p>
+            <button onclick="showCategories()">Start Game</button>
+        </div>
 
-    <script>
+        <div id="categoryScreen" class="hidden">
+            <h2>Choose Your Category</h2>
+            <button class="category-btn" onclick="startGame('geometry')">📐 Geometry</button>
+            <button class="category-btn" onclick="startGame('algebra')">🔢 Algebra</button>
+            <button class="category-btn" onclick="startGame('calculus')">📊 Calculus</button>
+        </div>
+
+        <div id="gameScreen" class="hidden">
+            <div id="score">Score: 0</div>
+            <div id="progress">Question 1/10</div>
+            <div id="question"></div>
+            <div id="answers"></div>
+        </div>
+
+        <div id="resultsScreen" class="hidden">
+            <h1>Round Complete! 🎉</h1>
+            <div id="finalScore"></div>
+            <button onclick="showCategories()">Play Again</button>
+            <button onclick="location.reload()">Main Menu</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js';
+        import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/webxr/VRButton.js';
+
         let scene, camera, renderer, vrButton;
         let score = 0;
         let currentQuestion = 0;
         let attempted = false;
         let currentCategory = '';
-        let particleSystem;
-        let isVRMode = false;
-        let isDragging = false;
-        let previousMousePosition = { x: 0, y: 0 };
-        let cameraRotation = { x: 0, y: 0 };
-        
-        // 3D UI elements
-        let uiGroup, questionMesh, answerMeshes = [];
-        let scoreMesh, progressMesh;
+        let uiMesh, uiCanvas, uiContext;
 
         const questions = {
             geometry: [
                 {q: "What is the sum of angles in a triangle?", a: ["180°", "360°", "90°", "270°"], c: 0},
                 {q: "How many sides does a hexagon have?", a: ["5", "6", "7", "8"], c: 1},
-                {q: "What is the area of a circle with radius 5?", a: ["78.5", "31.4", "15.7", "157"], c: 0},
+                {q: "What is the area of a circle with radius 5? (Use π ≈ 3.14)", a: ["78.5", "31.4", "15.7", "157"], c: 0},
                 {q: "What is the perimeter of a square with side 4?", a: ["8", "12", "16", "20"], c: 2},
                 {q: "How many faces does a cube have?", a: ["4", "6", "8", "12"], c: 1},
                 {q: "What is the volume of a cube with side 3?", a: ["9", "18", "27", "81"], c: 2},
                 {q: "What is the sum of angles in a quadrilateral?", a: ["180°", "270°", "360°", "450°"], c: 2},
                 {q: "What is the diagonal of a square with side 1?", a: ["1", "√2", "2", "√3"], c: 1},
                 {q: "How many edges does a cylinder have?", a: ["0", "1", "2", "3"], c: 2},
-                {q: "What is the area of a rectangle 5x3?", a: ["8", "15", "30", "25"], c: 1},
-                {q: "What is the circumference of circle r=2?", a: ["6.28", "12.56", "3.14", "9.42"], c: 1},
-                {q: "How many vertices in square pyramid?", a: ["4", "5", "6", "8"], c: 1},
-                {q: "Area of triangle base=6 height=4?", a: ["10", "12", "24", "48"], c: 1},
-                {q: "Triangle with all sides equal?", a: ["Isosceles", "Equilateral", "Scalene", "Right"], c: 1},
-                {q: "Degrees in a straight angle?", a: ["90°", "180°", "270°", "360°"], c: 1}
+                {q: "What is the area of a rectangle with length 5 and width 3?", a: ["8", "15", "30", "25"], c: 1},
+                {q: "What is the circumference of a circle with radius 2? (Use π ≈ 3.14)", a: ["6.28", "12.56", "3.14", "9.42"], c: 1},
+                {q: "How many vertices does a pyramid with square base have?", a: ["4", "5", "6", "8"], c: 1},
+                {q: "What is the area of a triangle with base 6 and height 4?", a: ["10", "12", "24", "48"], c: 1},
+                {q: "What type of triangle has all sides equal?", a: ["Isosceles", "Equilateral", "Scalene", "Right"], c: 1},
+                {q: "How many degrees in a straight angle?", a: ["90°", "180°", "270°", "360°"], c: 1}
             ],
             algebra: [
                 {q: "Solve for x: 2x + 5 = 15", a: ["5", "10", "7.5", "20"], c: 0},
@@ -100,60 +210,27 @@
                 {q: "Solve: 4x = 28", a: ["4", "7", "24", "32"], c: 1},
                 {q: "What is (-2)³?", a: ["6", "-6", "8", "-8"], c: 3},
                 {q: "Simplify: 2(x + 3)", a: ["2x + 3", "2x + 6", "x + 6", "2x + 5"], c: 1},
-                {q: "Slope of y = 3x + 2?", a: ["2", "3", "5", "x"], c: 1},
+                {q: "What is the slope of y = 3x + 2?", a: ["2", "3", "5", "x"], c: 1},
                 {q: "Solve: x + 8 = 15", a: ["7", "8", "23", "15"], c: 0}
             ],
             calculus: [
                 {q: "What is the derivative of x²?", a: ["x", "2x", "x²", "2"], c: 1},
                 {q: "What is ∫x dx?", a: ["x", "x²", "x²/2 + C", "2x"], c: 2},
-                {q: "Derivative of a constant?", a: ["1", "0", "x", "Undefined"], c: 1},
-                {q: "Derivative of 3x?", a: ["3", "3x", "x", "0"], c: 0},
+                {q: "What is the derivative of a constant?", a: ["1", "0", "x", "Undefined"], c: 1},
+                {q: "What is the derivative of 3x?", a: ["3", "3x", "x", "0"], c: 0},
                 {q: "What is lim(x→0) sin(x)/x?", a: ["0", "1", "∞", "Undefined"], c: 1},
-                {q: "Derivative of eˣ?", a: ["eˣ", "xeˣ⁻¹", "ln(x)", "1/x"], c: 0},
+                {q: "What is the derivative of eˣ?", a: ["eˣ", "xeˣ⁻¹", "ln(x)", "1/x"], c: 0},
                 {q: "What is ∫1 dx?", a: ["0", "1", "x + C", "x"], c: 2},
-                {q: "Derivative of ln(x)?", a: ["1", "1/x", "x", "ln(x)"], c: 1},
-                {q: "Derivative of sin(x)?", a: ["cos(x)", "-cos(x)", "sin(x)", "-sin(x)"], c: 0},
+                {q: "What is the derivative of ln(x)?", a: ["1", "1/x", "x", "ln(x)"], c: 1},
+                {q: "What is the derivative of sin(x)?", a: ["cos(x)", "-cos(x)", "sin(x)", "-sin(x)"], c: 0},
                 {q: "What is ∫2x dx?", a: ["2x", "x²", "x² + C", "2x² + C"], c: 2},
-                {q: "Power rule for xⁿ?", a: ["nxⁿ", "nxⁿ⁻¹", "xⁿ⁻¹", "xⁿ/n"], c: 1},
-                {q: "Derivative of x³?", a: ["3x", "3x²", "x²", "3x³"], c: 1},
-                {q: "Derivative of cos(x)?", a: ["sin(x)", "-sin(x)", "cos(x)", "-cos(x)"], c: 1},
-                {q: "What is ∫f'(x)dx?", a: ["f'(x)", "f(x) + C", "0", "f''(x)"], c: 1},
-                {q: "Derivative of 5x²?", a: ["5x", "10x", "5x²", "10"], c: 1}
+                {q: "What is the power rule for derivatives of xⁿ?", a: ["nxⁿ", "nxⁿ⁻¹", "xⁿ⁻¹", "xⁿ/n"], c: 1},
+                {q: "What is the derivative of x³?", a: ["3x", "3x²", "x²", "3x³"], c: 1},
+                {q: "What is the derivative of cos(x)?", a: ["sin(x)", "-sin(x)", "cos(x)", "-cos(x)"], c: 1},
+                {q: "What does ∫f'(x)dx equal?", a: ["f'(x)", "f(x) + C", "0", "f''(x)"], c: 1},
+                {q: "What is the derivative of 5x²?", a: ["5x", "10x", "5x²", "10"], c: 1}
             ]
         };
-
-        let gameState = 'start'; // start, category, game, results
-
-        function createTextTexture(text, options = {}) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = options.width || 1024;
-            canvas.height = options.height || 256;
-            
-            ctx.fillStyle = options.bgColor || 'rgba(0, 20, 40, 0.95)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            if (options.border) {
-                ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-                ctx.lineWidth = 8;
-                ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
-            }
-            
-            ctx.fillStyle = options.color || '#ffffff';
-            ctx.font = options.font || 'bold 60px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            const lines = text.split('\n');
-            const lineHeight = canvas.height / (lines.length + 1);
-            lines.forEach((line, i) => {
-                ctx.fillText(line, canvas.width / 2, lineHeight * (i + 1));
-            });
-            
-            const texture = new THREE.Texture(canvas);
-            texture.needsUpdate = true;
-            return texture;
-        }
 
         function initScene() {
             scene = new THREE.Scene();
@@ -169,9 +246,47 @@
             renderer.xr.enabled = true;
             document.body.appendChild(renderer.domElement);
 
-            // VR Button
-            vrButton = document.getElementById('vrButton');
-            vrButton.addEventListener('click', toggleVRMode);
+            // Replace default VR button with custom one
+            const customVRButton = document.getElementById('vrButton');
+            
+            // Check VR support
+            if (navigator.xr) {
+                navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+                    if (supported) {
+                        customVRButton.onclick = async () => {
+                            if (!renderer.xr.isPresenting) {
+                                const session = await navigator.xr.requestSession('immersive-vr', {
+                                    optionalFeatures: ['local-floor', 'bounded-floor']
+                                });
+                                renderer.xr.setSession(session);
+                                customVRButton.textContent = 'Exit VR';
+                            } else {
+                                renderer.xr.getSession().end();
+                            }
+                        };
+
+                        renderer.xr.addEventListener('sessionstart', () => {
+                            customVRButton.textContent = 'Exit VR';
+                            document.getElementById('ui').style.display = 'none';
+                            createVRUI();
+                        });
+
+                        renderer.xr.addEventListener('sessionend', () => {
+                            customVRButton.textContent = '🥽 Enter VR';
+                            document.getElementById('ui').style.display = 'block';
+                            if (uiMesh) {
+                                scene.remove(uiMesh);
+                            }
+                        });
+                    } else {
+                        customVRButton.textContent = 'VR Not Supported';
+                        customVRButton.disabled = true;
+                    }
+                });
+            } else {
+                customVRButton.textContent = 'WebXR Not Available';
+                customVRButton.disabled = true;
+            }
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
@@ -225,7 +340,7 @@
                 opacity: 0.8
             });
             
-            particleSystem = new THREE.Points(particles, particleMaterial);
+            const particleSystem = new THREE.Points(particles, particleMaterial);
             scene.add(particleSystem);
 
             // Trees
@@ -252,191 +367,207 @@
                 scene.add(trunk);
             }
 
-            // Create UI group
-            uiGroup = new THREE.Group();
-            scene.add(uiGroup);
-
-            // Mouse controls
-            renderer.domElement.addEventListener('mousedown', onMouseDown);
-            renderer.domElement.addEventListener('mousemove', onMouseMove);
-            renderer.domElement.addEventListener('mouseup', onMouseUp);
-            renderer.domElement.addEventListener('click', onCanvasClick);
-
-            // Touch controls
-            renderer.domElement.addEventListener('touchstart', onTouchStart);
-            renderer.domElement.addEventListener('touchmove', onTouchMove);
-            renderer.domElement.addEventListener('touchend', onTouchEnd);
-
-            showStartScreen();
             renderer.setAnimationLoop(animate);
         }
 
-        function toggleVRMode() {
-            isVRMode = !isVRMode;
-            if (isVRMode) {
-                if (renderer.domElement.requestFullscreen) {
-                    renderer.domElement.requestFullscreen();
-                }
-                vrButton.textContent = '🥽 EXIT VR MODE';
-                document.body.classList.add('vr-mode');
-                camera.fov = 90;
-            } else {
-                if (document.exitFullscreen && document.fullscreenElement) {
-                    document.exitFullscreen();
-                }
-                vrButton.textContent = '🥽 ENTER VR MODE';
-                document.body.classList.remove('vr-mode');
-                camera.fov = 75;
-            }
-            camera.updateProjectionMatrix();
-        }
+        function createVRUI() {
+            // Create a canvas for the UI
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            uiCanvas = canvas;
+            uiContext = canvas.getContext('2d');
 
-        function onMouseDown(event) {
-            isDragging = true;
-            previousMousePosition = { x: event.clientX, y: event.clientY };
-        }
-
-        function onMouseMove(event) {
-            if (isDragging) {
-                const deltaX = event.clientX - previousMousePosition.x;
-                const deltaY = event.clientY - previousMousePosition.y;
-                
-                cameraRotation.y += deltaX * 0.005;
-                cameraRotation.x += deltaY * 0.005;
-                cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
-                
-                previousMousePosition = { x: event.clientX, y: event.clientY };
-            }
-        }
-
-        function onMouseUp() {
-            isDragging = false;
-        }
-
-        let touchStartX = 0, touchStartY = 0;
-        function onTouchStart(event) {
-            if (event.touches.length === 1) {
-                touchStartX = event.touches[0].clientX;
-                touchStartY = event.touches[0].clientY;
-            }
-        }
-
-        function onTouchMove(event) {
-            if (event.touches.length === 1) {
-                const deltaX = event.touches[0].clientX - touchStartX;
-                const deltaY = event.touches[0].clientY - touchStartY;
-                
-                cameraRotation.y += deltaX * 0.005;
-                cameraRotation.x += deltaY * 0.005;
-                cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotation.x));
-                
-                touchStartX = event.touches[0].clientX;
-                touchStartY = event.touches[0].clientY;
-            }
-        }
-
-        function onTouchEnd() {
-            // Touch ended
-        }
-
-        function onCanvasClick(event) {
-            const mouse = new THREE.Vector2();
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(mouse, camera);
-
-            const intersects = raycaster.intersectObjects(uiGroup.children, true);
-            if (intersects.length > 0) {
-                const object = intersects[0].object;
-                if (object.userData.onClick) {
-                    object.userData.onClick();
-                }
-            }
-        }
-
-        function clearUI() {
-            while (uiGroup.children.length > 0) {
-                uiGroup.remove(uiGroup.children[0]);
-            }
-        }
-
-        function showStartScreen() {
-            clearUI();
-            gameState = 'start';
+            // Create texture from canvas
+            const texture = new THREE.CanvasTexture(canvas);
             
-            const titleTexture = createTextTexture('VR Math Trivia\n🌊', {
-                width: 2048,
-                height: 512,
-                color: '#00ffff',
-                font: 'bold 120px Arial',
-                border: true
+            // Create plane for UI
+            const geometry = new THREE.PlaneGeometry(3, 3);
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                side: THREE.DoubleSide
             });
-            const titleMaterial = new THREE.MeshBasicMaterial({ map: titleTexture, transparent: true });
-            const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(20, 5), titleMaterial);
-            titleMesh.position.set(0, 15, 0);
-            uiGroup.add(titleMesh);
+            
+            uiMesh = new THREE.Mesh(geometry, material);
+            uiMesh.position.set(0, 8, -5);
+            scene.add(uiMesh);
 
-            const startTexture = createTextTexture('START GAME', {
-                width: 1024,
-                height: 256,
-                color: '#ffffff',
-                font: 'bold 80px Arial',
-                bgColor: 'rgba(0, 102, 204, 0.9)',
-                border: true
-            });
-            const startMaterial = new THREE.MeshBasicMaterial({ map: startTexture, transparent: true });
-            const startButton = new THREE.Mesh(new THREE.PlaneGeometry(12, 3), startMaterial);
-            startButton.position.set(0, 8, 0);
-            startButton.userData.onClick = showCategories;
-            uiGroup.add(startButton);
+            // Draw current UI state
+            updateVRUI();
         }
 
-        function showCategories() {
-            clearUI();
-            gameState = 'category';
-            
-            const titleTexture = createTextTexture('Choose Category', {
-                width: 1024,
-                height: 256,
-                color: '#00ddff',
-                font: 'bold 80px Arial',
-                border: true
-            });
-            const titleMaterial = new THREE.MeshBasicMaterial({ map: titleTexture, transparent: true });
-            const titleMesh = new THREE.Mesh(new THREE.PlaneGeometry(15, 3), titleMaterial);
-            titleMesh.position.set(0, 18, 0);
-            uiGroup.add(titleMesh);
+        function updateVRUI() {
+            if (!uiContext) return;
 
-            const categories = [
-                { name: '📐 Geometry', key: 'geometry', y: 13 },
-                { name: '🔢 Algebra', key: 'algebra', y: 8 },
-                { name: '📊 Calculus', key: 'calculus', y: 3 }
-            ];
+            const ctx = uiContext;
+            const canvas = uiCanvas;
 
-            categories.forEach(cat => {
-                const texture = createTextTexture(cat.name, {
-                    width: 1024,
-                    height: 256,
-                    color: '#ffffff',
-                    font: 'bold 70px Arial',
-                    bgColor: 'rgba(26, 80, 128, 0.9)',
-                    border: true
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0, 20, 40, 0.95)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw border
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+            // Get current screen state
+            const startScreen = document.getElementById('startScreen');
+            const categoryScreen = document.getElementById('categoryScreen');
+            const gameScreen = document.getElementById('gameScreen');
+            const resultsScreen = document.getElementById('resultsScreen');
+
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 60px Arial';
+
+            if (!startScreen.classList.contains('hidden')) {
+                // Start screen
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 20;
+                ctx.fillText('🌊 VR Math Trivia 🌊', canvas.width / 2, 200);
+                ctx.shadowBlur = 0;
+                
+                ctx.font = '40px Arial';
+                ctx.fillStyle = '#aaddff';
+                ctx.fillText('Test your math knowledge in VR!', canvas.width / 2, 350);
+                
+                ctx.font = 'bold 50px Arial';
+                ctx.fillStyle = '#00ccff';
+                ctx.fillText('👉 Click Start Game on Screen 👈', canvas.width / 2, 550);
+            } else if (!categoryScreen.classList.contains('hidden')) {
+                // Category screen
+                ctx.fillStyle = '#00ddff';
+                ctx.fillText('Choose Your Category', canvas.width / 2, 180);
+                
+                ctx.font = 'bold 55px Arial';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText('📐 Geometry', canvas.width / 2, 350);
+                ctx.fillText('🔢 Algebra', canvas.width / 2, 500);
+                ctx.fillText('📊 Calculus', canvas.width / 2, 650);
+                
+                ctx.font = '35px Arial';
+                ctx.fillStyle = '#aaddff';
+                ctx.fillText('Select on your screen', canvas.width / 2, 850);
+            } else if (!gameScreen.classList.contains('hidden')) {
+                // Game screen
+                const scoreText = document.getElementById('score').textContent;
+                const progressText = document.getElementById('progress').textContent;
+                const questionText = document.getElementById('question').textContent;
+                const answersDiv = document.getElementById('answers');
+
+                ctx.fillStyle = '#ffff00';
+                ctx.shadowColor = '#ffff00';
+                ctx.shadowBlur = 10;
+                ctx.font = 'bold 45px Arial';
+                ctx.fillText(scoreText, canvas.width / 2, 100);
+                ctx.shadowBlur = 0;
+                
+                ctx.fillStyle = '#aaddff';
+                ctx.font = '35px Arial';
+                ctx.fillText(progressText, canvas.width / 2, 160);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 38px Arial';
+                
+                // Word wrap question
+                const words = questionText.split(' ');
+                let line = '';
+                let y = 280;
+                for (let word of words) {
+                    const testLine = line + word + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > 900 && line !== '') {
+                        ctx.fillText(line, canvas.width / 2, y);
+                        line = word + ' ';
+                        y += 50;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, canvas.width / 2, y);
+                
+                // Draw answers
+                ctx.font = '32px Arial';
+                y += 100;
+                const answers = answersDiv.querySelectorAll('.answer-btn');
+                answers.forEach((btn, i) => {
+                    if (btn.classList.contains('correct')) {
+                        ctx.fillStyle = '#00ff00';
+                    } else if (btn.classList.contains('incorrect')) {
+                        ctx.fillStyle = '#ff0000';
+                    } else {
+                        ctx.fillStyle = '#2a7090';
+                    }
+                    ctx.fillText(`${String.fromCharCode(65 + i)}) ${btn.textContent}`, canvas.width / 2, y + (i * 70));
                 });
-                const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-                const button = new THREE.Mesh(new THREE.PlaneGeometry(14, 3.5), material);
-                button.position.set(0, cat.y, 0);
-                button.userData.onClick = () => startGame(cat.key);
-                uiGroup.add(button);
-            });
+            } else if (!resultsScreen.classList.contains('hidden')) {
+                // Results screen
+                ctx.fillStyle = '#00ffff';
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 20;
+                ctx.fillText('Round Complete! 🎉', canvas.width / 2, 250);
+                ctx.shadowBlur = 0;
+                
+                const finalScoreText = document.getElementById('finalScore').textContent;
+                ctx.fillStyle = '#ffff00';
+                ctx.font = 'bold 70px Arial';
+                ctx.fillText(finalScoreText, canvas.width / 2, 450);
+                
+                ctx.font = '40px Arial';
+                ctx.fillStyle = '#aaddff';
+                ctx.fillText('Use screen to play again', canvas.width / 2, 650);
+            }
+
+            // Update texture
+            if (uiMesh) {
+                uiMesh.material.map.needsUpdate = true;
+            }
         }
 
-        function startGame(category) {
+        function animate() {
+            const particles = scene.children.find(child => child instanceof THREE.Points);
+            if (particles) {
+                const positions = particles.geometry.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] -= 0.3;
+                    if (positions[i] < 0) {
+                        positions[i] = 60;
+                    }
+                }
+                particles.geometry.attributes.position.needsUpdate = true;
+            }
+            
+            // Only auto-rotate camera in non-VR mode
+            if (!renderer.xr.isPresenting) {
+                camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
+                camera.lookAt(0, 5, 0);
+            }
+
+            // Update VR UI if in VR mode
+            if (renderer.xr.isPresenting && uiMesh) {
+                updateVRUI();
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        window.showCategories = function() {
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.add('hidden');
+            document.getElementById('categoryScreen').classList.remove('hidden');
+            if (renderer.xr.isPresenting) updateVRUI();
+        }
+
+        window.startGame = function(category) {
             currentCategory = category;
             score = 0;
             currentQuestion = 0;
-            gameState = 'game';
+            
+            document.getElementById('categoryScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            
             loadQuestion();
         }
 
@@ -446,218 +577,57 @@
                 return;
             }
 
-            clearUI();
             attempted = false;
             
             const categoryQuestions = questions[currentCategory];
             const randomQ = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
             
-            // Score
-            const scoreTexture = createTextTexture(`Score: ${score}`, {
-                width: 512,
-                height: 128,
-                color: '#ffff00',
-                font: 'bold 50px Arial',
-                bgColor: 'rgba(0, 0, 0, 0.8)'
-            });
-            scoreMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(8, 2),
-                new THREE.MeshBasicMaterial({ map: scoreTexture, transparent: true })
-            );
-            scoreMesh.position.set(-10, 18, 0);
-            uiGroup.add(scoreMesh);
-
-            // Progress
-            const progressTexture = createTextTexture(`Question ${currentQuestion + 1}/10`, {
-                width: 512,
-                height: 128,
-                color: '#aaddff',
-                font: 'bold 50px Arial',
-                bgColor: 'rgba(0, 0, 0, 0.8)'
-            });
-            progressMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(8, 2),
-                new THREE.MeshBasicMaterial({ map: progressTexture, transparent: true })
-            );
-            progressMesh.position.set(10, 18, 0);
-            uiGroup.add(progressMesh);
-
-            // Question
-            const questionTexture = createTextTexture(randomQ.q, {
-                width: 2048,
-                height: 512,
-                color: '#ffffff',
-                font: 'bold 60px Arial',
-                border: true
-            });
-            questionMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(20, 5),
-                new THREE.MeshBasicMaterial({ map: questionTexture, transparent: true })
-            );
-            questionMesh.position.set(0, 12, 0);
-            uiGroup.add(questionMesh);
-
-            // Answers
-            answerMeshes = [];
+            document.getElementById('question').textContent = randomQ.q;
+            document.getElementById('progress').textContent = `Question ${currentQuestion + 1}/10`;
+            document.getElementById('score').textContent = `Score: ${score}`;
+            
+            const answersDiv = document.getElementById('answers');
+            answersDiv.innerHTML = '';
+            
             randomQ.a.forEach((answer, index) => {
-                const texture = createTextTexture(answer, {
-                    width: 1024,
-                    height: 256,
-                    color: '#ffffff',
-                    font: 'bold 60px Arial',
-                    bgColor: 'rgba(26, 80, 144, 0.9)',
-                    border: true
-                });
-                const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-                const button = new THREE.Mesh(new THREE.PlaneGeometry(18, 3), material);
-                button.position.set(0, 6 - index * 3.5, 0);
-                button.userData.index = index;
-                button.userData.correct = randomQ.c;
-                button.userData.onClick = () => checkAnswer(index, randomQ.c, button);
-                uiGroup.add(button);
-                answerMeshes.push(button);
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.textContent = answer;
+                btn.onclick = () => checkAnswer(index, randomQ.c, btn);
+                answersDiv.appendChild(btn);
             });
+
+            if (renderer.xr.isPresenting) updateVRUI();
         }
 
-        function checkAnswer(selected, correct, button) {
+        function checkAnswer(selected, correct, btn) {
             if (selected === correct) {
-                const correctTexture = createTextTexture(button.material.map.image.textContent || 'CORRECT!', {
-                    width: 1024,
-                    height: 256,
-                    color: '#ffffff',
-                    font: 'bold 60px Arial',
-                    bgColor: 'rgba(0, 170, 0, 0.9)',
-                    border: true
-                });
-                button.material.map = correctTexture;
-                button.material.needsUpdate = true;
-                
+                btn.classList.add('correct');
                 if (!attempted) {
                     score += 10;
-                    const scoreTexture = createTextTexture(`Score: ${score}`, {
-                        width: 512,
-                        height: 128,
-                        color: '#ffff00',
-                        font: 'bold 50px Arial',
-                        bgColor: 'rgba(0, 0, 0, 0.8)'
-                    });
-                    scoreMesh.material.map = scoreTexture;
-                    scoreMesh.material.needsUpdate = true;
+                    document.getElementById('score').textContent = `Score: ${score}`;
                 }
-                
+                if (renderer.xr.isPresenting) updateVRUI();
                 setTimeout(() => {
                     currentQuestion++;
                     loadQuestion();
                 }, 1000);
             } else {
-                const incorrectTexture = createTextTexture('TRY AGAIN', {
-                    width: 1024,
-                    height: 256,
-                    color: '#ffffff',
-                    font: 'bold 60px Arial',
-                    bgColor: 'rgba(170, 0, 0, 0.9)',
-                    border: true
-                });
-                button.material.map = incorrectTexture;
-                button.material.needsUpdate = true;
+                btn.classList.add('incorrect');
                 attempted = true;
-                
+                if (renderer.xr.isPresenting) updateVRUI();
                 setTimeout(() => {
-                    loadQuestion();
-                }, 800);
+                    btn.classList.remove('incorrect');
+                    if (renderer.xr.isPresenting) updateVRUI();
+                }, 500);
             }
         }
 
         function showResults() {
-            clearUI();
-            gameState = 'results';
-            
-            const titleTexture = createTextTexture('Round Complete!\n🎉', {
-                width: 2048,
-                height: 512,
-                color: '#00ffff',
-                font: 'bold 100px Arial',
-                border: true
-            });
-            const titleMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(20, 5),
-                new THREE.MeshBasicMaterial({ map: titleTexture, transparent: true })
-            );
-            titleMesh.position.set(0, 16, 0);
-            uiGroup.add(titleMesh);
-
-            const scoreTexture = createTextTexture(`Final Score: ${score}/100`, {
-                width: 1024,
-                height: 256,
-                color: '#ffff00',
-                font: 'bold 70px Arial',
-                border: true
-            });
-            const scoreMesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(15, 3),
-                new THREE.MeshBasicMaterial({ map: scoreTexture, transparent: true })
-            );
-            scoreMesh.position.set(0, 10, 0);
-            uiGroup.add(scoreMesh);
-
-            const playAgainTexture = createTextTexture('PLAY AGAIN', {
-                width: 1024,
-                height: 256,
-                color: '#ffffff',
-                font: 'bold 70px Arial',
-                bgColor: 'rgba(0, 102, 204, 0.9)',
-                border: true
-            });
-            const playAgainButton = new THREE.Mesh(
-                new THREE.PlaneGeometry(13, 3),
-                new THREE.MeshBasicMaterial({ map: playAgainTexture, transparent: true })
-            );
-            playAgainButton.position.set(0, 5, 0);
-            playAgainButton.userData.onClick = showCategories;
-            uiGroup.add(playAgainButton);
-
-            const mainMenuTexture = createTextTexture('MAIN MENU', {
-                width: 1024,
-                height: 256,
-                color: '#ffffff',
-                font: 'bold 70px Arial',
-                bgColor: 'rgba(80, 80, 80, 0.9)',
-                border: true
-            });
-            const mainMenuButton = new THREE.Mesh(
-                new THREE.PlaneGeometry(13, 3),
-                new THREE.MeshBasicMaterial({ map: mainMenuTexture, transparent: true })
-            );
-            mainMenuButton.position.set(0, 0, 0);
-            mainMenuButton.userData.onClick = showStartScreen;
-            uiGroup.add(mainMenuButton);
-        }
-
-        function animate() {
-            // Animate waterfall particles
-            if (particleSystem) {
-                const positions = particleSystem.geometry.attributes.position.array;
-                for (let i = 1; i < positions.length; i += 3) {
-                    positions[i] -= 0.3;
-                    if (positions[i] < 0) {
-                        positions[i] = 60;
-                    }
-                }
-                particleSystem.geometry.attributes.position.needsUpdate = true;
-            }
-            
-            // Update camera rotation based on user input
-            camera.rotation.order = 'YXZ';
-            camera.rotation.y = cameraRotation.y;
-            camera.rotation.x = cameraRotation.x;
-            
-            // Keep UI in front of camera
-            uiGroup.position.copy(camera.position);
-            uiGroup.position.x += Math.sin(camera.rotation.y) * 25;
-            uiGroup.position.z += Math.cos(camera.rotation.y) * 25;
-            uiGroup.rotation.y = camera.rotation.y;
-            
-            renderer.render(scene, camera);
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('finalScore').textContent = `Final Score: ${score}/100`;
+            document.getElementById('resultsScreen').classList.remove('hidden');
+            if (renderer.xr.isPresenting) updateVRUI();
         }
 
         window.addEventListener('resize', () => {
@@ -667,3 +637,6 @@
         });
 
         initScene();
+    </script>
+</body>
+</html>
