@@ -81,17 +81,36 @@ const questions = {
         {q:"How many sides does a hexagon have?", a:["5","6","7","8"], c:1},
         {q:"What is the area of a circle with radius 5? (Use π ≈ 3.14)", a:["78.5","31.4","15.7","157"], c:0},
         {q:"What is the perimeter of a square with side 4?", a:["8","12","16","20"], c:2},
-        {q:"How many faces does a cube have?", a:["4","6","8","12"], c:1}
+        {q:"How many faces does a cube have?", a:["4","6","8","12"], c:1},
+        {q:"What is the volume of a cube with side 3?", a:["9","27","18","12"], c:1},
+        {q:"How many degrees in a right angle?", a:["45°","90°","180°","360°"], c:1},
+        {q:"What is the circumference of a circle with radius 2? (Use π ≈ 3.14)", a:["6.28","12.56","3.14","9.42"], c:1},
+        {q:"How many edges does a cube have?", a:["6","8","12","16"], c:2},
+        {q:"What is the area of a rectangle with length 5 and width 3?", a:["8","15","18","20"], c:1}
     ],
     algebra: [
         {q:"Solve for x: 2x + 5 = 15", a:["5","10","7.5","20"], c:0},
         {q:"What is x² when x = 4?", a:["8","16","12","20"], c:1},
-        {q:"Simplify: 3x + 2x", a:["5x","6x","5x²","x⁵"], c:0}
+        {q:"Simplify: 3x + 2x", a:["5x","6x","5x²","x⁵"], c:0},
+        {q:"What is 3 × (4 + 2)?", a:["14","18","20","12"], c:1},
+        {q:"Solve: x - 7 = 3", a:["10","4","-4","7"], c:0},
+        {q:"What is 2³?", a:["6","8","9","16"], c:1},
+        {q:"Simplify: 4x - x", a:["3x","4x","5x","3"], c:0},
+        {q:"What is √16?", a:["2","4","8","16"], c:1},
+        {q:"Solve: 3x = 21", a:["6","7","8","18"], c:1},
+        {q:"What is 5²?", a:["10","15","25","50"], c:2}
     ],
     calculus: [
         {q:"What is the derivative of x²?", a:["x","2x","x²","2"], c:1},
         {q:"What is ∫x dx?", a:["x","x²","x²/2 + C","2x"], c:2},
-        {q:"What is the derivative of a constant?", a:["1","0","x","Undefined"], c:1}
+        {q:"What is the derivative of a constant?", a:["1","0","x","Undefined"], c:1},
+        {q:"What is the derivative of 3x?", a:["3","3x","x","0"], c:0},
+        {q:"What is ∫3 dx?", a:["3","3x","3x + C","x"], c:2},
+        {q:"What is the derivative of x³?", a:["3x","3x²","x²","3"], c:1},
+        {q:"What is d/dx(sin x)?", a:["cos x","-cos x","sin x","-sin x"], c:0},
+        {q:"What is ∫2x dx?", a:["2x","x²","x² + C","2"], c:2},
+        {q:"What is the derivative of 5x²?", a:["5x","10x","5","10"], c:1},
+        {q:"What is the power rule for d/dx(x^n)?", a:["nx^n","nx^(n-1)","x^n","n"], c:1}
     ]
 };
 
@@ -117,7 +136,7 @@ function initScene(){
 
     create360Environment();
     createEnvironmentObjects();
-    setupVRControls();
+    setupVRButton();
     animate();
 }
 
@@ -131,18 +150,29 @@ function create360Environment(){
     gradient.addColorStop(0,'#1a2980'); gradient.addColorStop(1,'#26d0ce');
     ctx.fillStyle = gradient; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    for(let i=0;i<10;i++){ ctx.beginPath(); ctx.arc(Math.random()*canvas.width,Math.random()*canvas.height/2,30+Math.random()*50,0,Math.PI*2); ctx.fill(); }
+    for(let i=0;i<10;i++){ 
+        ctx.beginPath(); 
+        ctx.arc(Math.random()*canvas.width,Math.random()*canvas.height/2,30+Math.random()*50,0,Math.PI*2); 
+        ctx.fill(); 
+    }
     const texture = new THREE.CanvasTexture(canvas);
     const material = new THREE.MeshBasicMaterial({map:texture});
     scene.add(new THREE.Mesh(geometry,material));
 }
 
 function createEnvironmentObjects(){
-    const pool = new THREE.Mesh(new THREE.CylinderGeometry(25,25,1,32), new THREE.MeshPhongMaterial({color:0x1e90ff,transparent:true,opacity:0.7,shininess:100}));
-    pool.position.y=0; scene.add(pool);
+    const pool = new THREE.Mesh(
+        new THREE.CylinderGeometry(25,25,1,32), 
+        new THREE.MeshPhongMaterial({color:0x1e90ff,transparent:true,opacity:0.7,shininess:100})
+    );
+    pool.position.y=0; 
+    scene.add(pool);
 
     for(let i=0;i<3;i++){
-        const cliff = new THREE.Mesh(new THREE.BoxGeometry(15,40,15), new THREE.MeshPhongMaterial({color:0x808080}));
+        const cliff = new THREE.Mesh(
+            new THREE.BoxGeometry(15,40,15), 
+            new THREE.MeshPhongMaterial({color:0x808080})
+        );
         cliff.position.set(Math.cos(i*Math.PI*2/3)*30,20,Math.sin(i*Math.PI*2/3)*30);
         scene.add(cliff);
     }
@@ -150,86 +180,192 @@ function createEnvironmentObjects(){
     // Particles
     const particles = new THREE.BufferGeometry();
     const pos = new Float32Array(1000*3);
-    for(let i=0;i<pos.length;i+=3){ pos[i]=(Math.random()-0.5)*60; pos[i+1]=Math.random()*50+10; pos[i+2]=(Math.random()-0.5)*60; }
+    for(let i=0;i<pos.length;i+=3){ 
+        pos[i]=(Math.random()-0.5)*60; 
+        pos[i+1]=Math.random()*50+10; 
+        pos[i+2]=(Math.random()-0.5)*60; 
+    }
     particles.setAttribute('position',new THREE.BufferAttribute(pos,3));
     const particleMat = new THREE.PointsMaterial({color:0xffffff,size:0.3,transparent:true,opacity:0.8});
     scene.add(new THREE.Points(particles,particleMat));
 
     // Trees
     for(let i=0;i<15;i++){
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.7,8,8),new THREE.MeshPhongMaterial({color:0x8b4513}));
-        const leaves = new THREE.Mesh(new THREE.SphereGeometry(3,8,8),new THREE.MeshPhongMaterial({color:0x228b22}));
-        leaves.position.y=6; trunk.add(leaves);
+        const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.5,0.7,8,8),
+            new THREE.MeshPhongMaterial({color:0x8b4513})
+        );
+        const leaves = new THREE.Mesh(
+            new THREE.SphereGeometry(3,8,8),
+            new THREE.MeshPhongMaterial({color:0x228b22})
+        );
+        leaves.position.y=6; 
+        trunk.add(leaves);
         const angle=(i/15)*Math.PI*2, radius=35+Math.random()*10;
         trunk.position.set(Math.cos(angle)*radius,4,Math.sin(angle)*radius);
         scene.add(trunk);
     }
 }
 
-// VR session toggle
-function toggleVR(){
-    const vrButton=document.getElementById('vrButton');
-    const controls=document.getElementById('controls');
-    if(!isVRMode){
-        vrButton.textContent='Exit VR Mode';
-        vrButton.classList.add('vr-active');
-        controls.classList.add('vr-active');
-        renderer.xr.setSession(null);
-        navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}).then(session=>{
-            renderer.xr.setSession(session);
+// Setup VR button with proper session handling
+function setupVRButton(){
+    const vrButton = document.getElementById('vrButton');
+    
+    // Check if VR is supported
+    if('xr' in navigator){
+        navigator.xr.isSessionSupported('immersive-vr').then((supported)=>{
+            if(!supported){
+                vrButton.textContent = 'VR Not Supported';
+                vrButton.disabled = true;
+            }
         });
     } else {
-        vrButton.textContent='Enter VR Mode';
+        vrButton.textContent = 'VR Not Available';
+        vrButton.disabled = true;
+    }
+}
+
+// VR session toggle with proper error handling
+function toggleVR(){
+    const vrButton = document.getElementById('vrButton');
+    const controls = document.getElementById('controls');
+    
+    if(!isVRMode){
+        // Enter VR Mode
+        vrButton.textContent = 'Exit VR Mode';
+        vrButton.classList.add('vr-active');
+        controls.classList.add('vr-active');
+        
+        if('xr' in navigator){
+            navigator.xr.requestSession('immersive-vr', {
+                optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+            }).then((session) => {
+                renderer.xr.setSession(session);
+                isVRMode = true;
+                
+                // Handle session end
+                session.addEventListener('end', () => {
+                    isVRMode = false;
+                    vrButton.textContent = 'Enter VR Mode';
+                    vrButton.classList.remove('vr-active');
+                    controls.classList.remove('vr-active');
+                });
+            }).catch((err) => {
+                console.error('Failed to start VR session:', err);
+                vrButton.textContent = 'Enter VR Mode';
+                vrButton.classList.remove('vr-active');
+                controls.classList.remove('vr-active');
+                alert('Failed to enter VR mode. Make sure you are using a VR-capable browser and device.');
+            });
+        }
+    } else {
+        // Exit VR Mode
+        const session = renderer.xr.getSession();
+        if(session){
+            session.end();
+        }
+        isVRMode = false;
+        vrButton.textContent = 'Enter VR Mode';
         vrButton.classList.remove('vr-active');
         controls.classList.remove('vr-active');
-        renderer.xr.getSession()?.end();
     }
-    isVRMode=!isVRMode;
-
-// VR gaze click for quiz (simple example)
-function setupVRControls(){
-    // nothing extra for desktop, you can extend for 3D buttons
 }
 
 function animate(){
-    renderer.setAnimationLoop(()=>{
-        if(isVRMode){
-            // camera in VR
-        } else {
-            camera.position.x=Math.sin(Date.now()*0.0001)*5;
-            camera.lookAt(0,5,0);
+    renderer.setAnimationLoop(() => {
+        // Smooth camera movement in non-VR mode
+        if(!isVRMode){
+            camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
+            camera.lookAt(0, 5, 0);
         }
+        
         // Animate particles
-        const particles=scene.children.find(c=>c instanceof THREE.Points);
+        const particles = scene.children.find(c => c instanceof THREE.Points);
         if(particles){
-            const positions=particles.geometry.attributes.position.array;
-            for(let i=1;i<positions.length;i+=3){ positions[i]-=0.3; if(positions[i]<0) positions[i]=60; }
-            particles.geometry.attributes.position.needsUpdate=true;
+            const positions = particles.geometry.attributes.position.array;
+            for(let i=1; i<positions.length; i+=3){ 
+                positions[i] -= 0.3; 
+                if(positions[i] < 0) positions[i] = 60; 
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
         }
-        renderer.render(scene,camera);
+        
+        renderer.render(scene, camera);
     });
 }
 
 // Standard quiz functions
-function showCategories(){document.getElementById('startScreen').classList.add('hidden'); document.getElementById('resultsScreen').classList.add('hidden'); document.getElementById('categoryScreen').classList.remove('hidden');}
-function startGame(cat){currentCategory=cat; score=0; currentQuestion=0; document.getElementById('categoryScreen').classList.add('hidden'); document.getElementById('gameScreen').classList.remove('hidden'); loadQuestion();}
+function showCategories(){
+    document.getElementById('startScreen').classList.add('hidden'); 
+    document.getElementById('resultsScreen').classList.add('hidden'); 
+    document.getElementById('categoryScreen').classList.remove('hidden');
+}
+
+function startGame(cat){
+    currentCategory = cat; 
+    score = 0; 
+    currentQuestion = 0; 
+    document.getElementById('categoryScreen').classList.add('hidden'); 
+    document.getElementById('gameScreen').classList.remove('hidden'); 
+    loadQuestion();
+}
+
 function loadQuestion(){
-    if(currentQuestion>=10){showResults(); return;}
-    attempted=false; const categoryQuestions=questions[currentCategory]; const randomQ=categoryQuestions[Math.floor(Math.random()*categoryQuestions.length)];
-    document.getElementById('question').textContent=randomQ.q;
-    document.getElementById('progress').textContent=`Question ${currentQuestion+1}/10`;
-    document.getElementById('score').textContent=`Score: ${score}`;
-    const answersDiv=document.getElementById('answers'); answersDiv.innerHTML='';
-    randomQ.a.forEach((answer,index)=>{
-        const btn=document.createElement('button');
-        btn.className='answer-btn'; btn.textContent=answer;
-        btn.onclick=()=>{if(index===randomQ.c){btn.classList.add('correct'); if(!attempted){score+=10; document.getElementById('score').textContent=`Score: ${score}`;} setTimeout(()=>{currentQuestion++; loadQuestion();},1000);}else{btn.classList.add('incorrect'); attempted=true; setTimeout(()=>{btn.classList.remove('incorrect');},500);}};
+    if(currentQuestion >= 10){
+        showResults(); 
+        return;
+    }
+    
+    attempted = false; 
+    const categoryQuestions = questions[currentCategory]; 
+    const randomQ = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
+    
+    document.getElementById('question').textContent = randomQ.q;
+    document.getElementById('progress').textContent = `Question ${currentQuestion+1}/10`;
+    document.getElementById('score').textContent = `Score: ${score}`;
+    
+    const answersDiv = document.getElementById('answers'); 
+    answersDiv.innerHTML = '';
+    
+    randomQ.a.forEach((answer, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn'; 
+        btn.textContent = answer;
+        btn.onclick = () => {
+            if(index === randomQ.c){
+                btn.classList.add('correct'); 
+                if(!attempted){
+                    score += 10; 
+                    document.getElementById('score').textContent = `Score: ${score}`;
+                } 
+                setTimeout(() => {
+                    currentQuestion++; 
+                    loadQuestion();
+                }, 1000);
+            } else {
+                btn.classList.add('incorrect'); 
+                attempted = true; 
+                setTimeout(() => {
+                    btn.classList.remove('incorrect');
+                }, 500);
+            }
+        };
         answersDiv.appendChild(btn);
     });
 }
-function showResults(){document.getElementById('gameScreen').classList.add('hidden'); document.getElementById('finalScore').textContent=`Final Score: ${score}/100`; document.getElementById('resultsScreen').classList.remove('hidden');}
 
-window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight);});
+function showResults(){
+    document.getElementById('gameScreen').classList.add('hidden'); 
+    document.getElementById('finalScore').textContent = `Final Score: ${score}/100`; 
+    document.getElementById('resultsScreen').classList.remove('hidden');
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight; 
+    camera.updateProjectionMatrix(); 
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
 initScene();
 </script>
 </body>
