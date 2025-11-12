@@ -456,37 +456,56 @@
         }
 
         function toggleVR() {
-            isVRMode = !isVRMode;
-            const vrButton = document.getElementById('vrButton');
-            const controls = document.getElementById('controls');
-            
-            if (isVRMode) {
-                // Enter VR mode
-                vrButton.textContent = 'Exit VR Mode';
-                vrButton.classList.add('vr-active');
-                controls.classList.add('vr-active');
-                
-                // Move camera to VR starting position
-                camera.position.set(0, 5, 0);
-                cameraRotation.x = 0;
-                cameraRotation.y = 0;
-                
-                // Hide cursor
-                renderer.domElement.style.cursor = 'none';
-            } else {
-                // Exit VR mode
-                vrButton.textContent = 'Enter VR Mode';
-                vrButton.classList.remove('vr-active');
-                controls.classList.remove('vr-active');
-                
-                // Reset camera to default position
-                camera.position.set(0, 10, 30);
-                camera.lookAt(0, 5, 0);
-                
-                // Show cursor
-                renderer.domElement.style.cursor = 'default';
-            }
+    isVRMode = !isVRMode;
+    const vrButton = document.getElementById('vrButton');
+    const controls = document.getElementById('controls');
+    const body = document.body;
+
+    if (isVRMode) {
+        // Enter VR mode
+        vrButton.textContent = 'Exit VR Mode';
+        vrButton.classList.add('vr-active');
+        controls.classList.add('vr-active');
+
+        // Go fullscreen
+        if (body.requestFullscreen) {
+            body.requestFullscreen();
+        } else if (body.webkitRequestFullscreen) { // Safari
+            body.webkitRequestFullscreen();
+        } else if (body.msRequestFullscreen) { // IE/Edge
+            body.msRequestFullscreen();
         }
+
+        // Move camera to VR starting position
+        camera.position.set(0, 5, 0);
+        cameraRotation.x = 0;
+        cameraRotation.y = 0;
+
+        // Hide cursor
+        renderer.domElement.style.cursor = 'none';
+    } else {
+        // Exit VR mode
+        vrButton.textContent = 'Enter VR Mode';
+        vrButton.classList.remove('vr-active');
+        controls.classList.remove('vr-active');
+
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+
+        // Reset camera to default position
+        camera.position.set(0, 10, 30);
+        camera.lookAt(0, 5, 0);
+
+        // Show cursor
+        renderer.domElement.style.cursor = 'default';
+    }
+}
 
         function animate() {
             requestAnimationFrame(animate);
