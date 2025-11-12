@@ -6,177 +6,233 @@
 <title>VR Math Trivia</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-  body { margin:0; overflow:hidden; font-family:Arial; }
-  #ui { position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; pointer-events:auto; }
-  .screen { 
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      background: rgba(0,20,40,0.95); padding:30px; border-radius:20px; text-align:center;
-      pointer-events:all; color:#fff;
-  }
-  .hidden { display:none; }
-  button {
-      background: linear-gradient(135deg,#0066cc,#00ccff);
-      color:white; border:none; padding:12px 25px; margin:8px; border-radius:10px;
-      cursor:pointer; font-size:1em;
-  }
-  #vrButton { position:absolute; top:20px; right:20px; z-index:100; }
+body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
+#ui { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
+#startScreen,#categoryScreen,#gameScreen,#resultsScreen {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background: rgba(0,20,40,0.95); padding:40px; border-radius:20px; text-align:center;
+    pointer-events:all; box-shadow:0 10px 50px rgba(0,255,255,0.3); border:2px solid rgba(0,255,255,0.5);
+    max-width:600px; z-index:11;
+}
+h1 { color:#00ffff; margin:0 0 20px 0; font-size:2.5em; text-shadow:0 0 10px #00ffff; }
+h2 { color:#00ddff; margin:0 0 20px 0; font-size:1.8em; }
+button { background: linear-gradient(135deg, #0066cc, #00ccff); color:white; border:none; padding:15px 30px; margin:10px; font-size:1.1em; border-radius:10px; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 15px rgba(0,200,255,0.4); }
+button:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,200,255,0.6); }
+button:active { transform:translateY(0); }
+.category-btn { display:block; width:100%; margin:15px 0; }
+.answer-btn { display:block; width:100%; text-align:left; padding:15px 20px; margin:10px 0; background:linear-gradient(135deg,#1a5080,#2a7090); }
+.answer-btn.correct { background: linear-gradient(135deg,#00aa00,#00ff00); }
+.answer-btn.incorrect { background: linear-gradient(135deg,#aa0000,#ff0000); }
+#score { color:#ffff00; font-size:1.3em; margin:10px 0; text-shadow:0 0 5px #ffff00; }
+#progress { color:#aaddff; font-size:1.1em; margin:10px 0; }
+.hidden { display:none; }
+p { color:#aaddff; font-size:1.1em; margin:15px 0; }
+#vrButton { position:absolute; top:20px; right:20px; pointer-events:all; background:linear-gradient(135deg,#8a2be2,#9370db); z-index:100; }
+#vrButton:hover { background: linear-gradient(135deg,#9b30ff,#a07aff); }
+#vrButton.vr-active { background: linear-gradient(135deg,#ff4500,#ff6347); }
+#controls { position:absolute; bottom:20px; left:20px; color:white; background:rgba(0,0,0,0.5); padding:10px; border-radius:5px; pointer-events:none; z-index:100; }
+#controls.vr-active { pointer-events:all; }
 </style>
 </head>
 <body>
-
 <div id="ui">
-  <div id="startScreen" class="screen">
-      <h1>🌊 VR Math Trivia</h1>
-      <button onclick="showCategories()">Start Game</button>
-  </div>
+    <div id="startScreen">
+        <h1>🌊 VR Math Trivia 🌊</h1>
+        <p>Test your math knowledge in a stunning waterfall environment!</p>
+        <button onclick="showCategories()">Start Game</button>
+    </div>
 
-  <div id="categoryScreen" class="screen hidden">
-      <h2>Choose Your Category</h2>
-      <button onclick="startGame('geometry')">Geometry</button>
-      <button onclick="startGame('algebra')">Algebra</button>
-      <button onclick="startGame('calculus')">Calculus</button>
-  </div>
+    <div id="categoryScreen" class="hidden">
+        <h2>Choose Your Category</h2>
+        <button class="category-btn" onclick="startGame('geometry')">📐 Geometry</button>
+        <button class="category-btn" onclick="startGame('algebra')">🔢 Algebra</button>
+        <button class="category-btn" onclick="startGame('calculus')">📊 Calculus</button>
+    </div>
 
-  <div id="gameScreen" class="screen hidden">
-      <div id="score">Score: 0</div>
-      <div id="progress">Question 1/10</div>
-      <div id="question"></div>
-      <div id="answers"></div>
-  </div>
+    <div id="gameScreen" class="hidden">
+        <div id="score">Score: 0</div>
+        <div id="progress">Question 1/10</div>
+        <div id="question"></div>
+        <div id="answers"></div>
+    </div>
 
-  <div id="resultsScreen" class="screen hidden">
-      <h1>Round Complete!</h1>
-      <div id="finalScore"></div>
-      <button onclick="showCategories()">Play Again</button>
-      <button onclick="location.reload()">Main Menu</button>
-  </div>
+    <div id="resultsScreen" class="hidden">
+        <h1>Round Complete! 🎉</h1>
+        <div id="finalScore"></div>
+        <button onclick="showCategories()">Play Again</button>
+        <button onclick="location.reload()">Main Menu</button>
+    </div>
+    
+    <button id="vrButton" onclick="toggleVR()">Enter VR Mode</button>
+</div>
 
-  <button id="vrButton" onclick="toggleVR()">Enter VR</button>
+<div id="controls">
+    <p>Drag to look around</p>
+    <p>Scroll to zoom</p>
 </div>
 
 <script>
 let scene, camera, renderer;
-let isVRMode=false;
+let score = 0, currentQuestion = 0, attempted = false, currentCategory = '';
+let isVRMode = false, cameraRotation = {x:0,y:0};
+const questions = {
+    geometry: [
+        {q:"What is the sum of angles in a triangle?", a:["180°","360°","90°","270°"], c:0},
+        {q:"How many sides does a hexagon have?", a:["5","6","7","8"], c:1},
+        {q:"What is the area of a circle with radius 5? (Use π ≈ 3.14)", a:["78.5","31.4","15.7","157"], c:0},
+        {q:"What is the perimeter of a square with side 4?", a:["8","12","16","20"], c:2},
+        {q:"How many faces does a cube have?", a:["4","6","8","12"], c:1}
+    ],
+    algebra: [
+        {q:"Solve for x: 2x + 5 = 15", a:["5","10","7.5","20"], c:0},
+        {q:"What is x² when x = 4?", a:["8","16","12","20"], c:1},
+        {q:"Simplify: 3x + 2x", a:["5x","6x","5x²","x⁵"], c:0}
+    ],
+    calculus: [
+        {q:"What is the derivative of x²?", a:["x","2x","x²","2"], c:1},
+        {q:"What is ∫x dx?", a:["x","x²","x²/2 + C","2x"], c:2},
+        {q:"What is the derivative of a constant?", a:["1","0","x","Undefined"], c:1}
+    ]
+};
 
-// ------------------ Init Scene ------------------
 function initScene(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb,50,200);
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.set(0,5,20);
+    camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+    camera.position.set(0,10,30);
+    camera.lookAt(0,5,0);
 
     renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;  // Enable WebXR
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    renderer.xr.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // Basic lighting
-    scene.add(new THREE.AmbientLight(0xffffff,0.6));
-    let dirLight = new THREE.DirectionalLight(0xffffff,0.8);
-    dirLight.position.set(50,50,50);
-    scene.add(dirLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff,0.6);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff,0.8);
+    directionalLight.position.set(50,50,50);
+    scene.add(directionalLight);
 
-    // Simple environment
-    let geometry = new THREE.SphereGeometry(200,60,40);
-    geometry.scale(-1,1,1);
-    let texture = new THREE.TextureLoader().load('https://cdn.pixabay.com/photo/2013/07/12/16/54/sky-151994_1280.jpg');
-    scene.add(new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({map:texture})));
-
+    create360Environment();
+    createEnvironmentObjects();
+    setupVRControls();
     animate();
 }
 
-// ------------------ Animate Loop ------------------
+function create360Environment(){
+    const geometry = new THREE.SphereGeometry(500,60,40);
+    geometry.scale(-1,1,1);
+    const canvas = document.createElement('canvas');
+    canvas.width=1024; canvas.height=512;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0,0,0,canvas.height);
+    gradient.addColorStop(0,'#1a2980'); gradient.addColorStop(1,'#26d0ce');
+    ctx.fillStyle = gradient; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    for(let i=0;i<10;i++){ ctx.beginPath(); ctx.arc(Math.random()*canvas.width,Math.random()*canvas.height/2,30+Math.random()*50,0,Math.PI*2); ctx.fill(); }
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({map:texture});
+    scene.add(new THREE.Mesh(geometry,material));
+}
+
+function createEnvironmentObjects(){
+    const pool = new THREE.Mesh(new THREE.CylinderGeometry(25,25,1,32), new THREE.MeshPhongMaterial({color:0x1e90ff,transparent:true,opacity:0.7,shininess:100}));
+    pool.position.y=0; scene.add(pool);
+
+    for(let i=0;i<3;i++){
+        const cliff = new THREE.Mesh(new THREE.BoxGeometry(15,40,15), new THREE.MeshPhongMaterial({color:0x808080}));
+        cliff.position.set(Math.cos(i*Math.PI*2/3)*30,20,Math.sin(i*Math.PI*2/3)*30);
+        scene.add(cliff);
+    }
+
+    // Particles
+    const particles = new THREE.BufferGeometry();
+    const pos = new Float32Array(1000*3);
+    for(let i=0;i<pos.length;i+=3){ pos[i]=(Math.random()-0.5)*60; pos[i+1]=Math.random()*50+10; pos[i+2]=(Math.random()-0.5)*60; }
+    particles.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    const particleMat = new THREE.PointsMaterial({color:0xffffff,size:0.3,transparent:true,opacity:0.8});
+    scene.add(new THREE.Points(particles,particleMat));
+
+    // Trees
+    for(let i=0;i<15;i++){
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.7,8,8),new THREE.MeshPhongMaterial({color:0x8b4513}));
+        const leaves = new THREE.Mesh(new THREE.SphereGeometry(3,8,8),new THREE.MeshPhongMaterial({color:0x228b22}));
+        leaves.position.y=6; trunk.add(leaves);
+        const angle=(i/15)*Math.PI*2, radius=35+Math.random()*10;
+        trunk.position.set(Math.cos(angle)*radius,4,Math.sin(angle)*radius);
+        scene.add(trunk);
+    }
+}
+
+// VR session toggle
+function toggleVR(){
+    const vrButton=document.getElementById('vrButton');
+    const controls=document.getElementById('controls');
+    if(!isVRMode){
+        vrButton.textContent='Exit VR Mode';
+        vrButton.classList.add('vr-active');
+        controls.classList.add('vr-active');
+        document.getElementById('ui').style.display='none';
+        renderer.xr.setSession(null);
+        navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}).then(session=>{
+            renderer.xr.setSession(session);
+        });
+    } else {
+        vrButton.textContent='Enter VR Mode';
+        vrButton.classList.remove('vr-active');
+        controls.classList.remove('vr-active');
+        document.getElementById('ui').style.display='block';
+        renderer.xr.getSession()?.end();
+    }
+    isVRMode=!isVRMode;
+}
+
+// VR gaze click for quiz (simple example)
+function setupVRControls(){
+    // nothing extra for desktop, you can extend for 3D buttons
+}
+
 function animate(){
     renderer.setAnimationLoop(()=>{
+        if(isVRMode){
+            // camera in VR
+        } else {
+            camera.position.x=Math.sin(Date.now()*0.0001)*5;
+            camera.lookAt(0,5,0);
+        }
+        // Animate particles
+        const particles=scene.children.find(c=>c instanceof THREE.Points);
+        if(particles){
+            const positions=particles.geometry.attributes.position.array;
+            for(let i=1;i<positions.length;i+=3){ positions[i]-=0.3; if(positions[i]<0) positions[i]=60; }
+            particles.geometry.attributes.position.needsUpdate=true;
+        }
         renderer.render(scene,camera);
     });
 }
 
-// ------------------ VR Toggle ------------------
-function toggleVR(){
-    const btn = document.getElementById('vrButton');
-    isVRMode = !isVRMode;
-    if(isVRMode){
-        btn.textContent='Exit VR';
-        navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']})
-            .then(session => renderer.xr.setSession(session));
-    } else {
-        btn.textContent='Enter VR';
-        renderer.xr.getSession()?.end();
-    }
-}
-
-// ------------------ Quiz Logic ------------------
-let score=0, currentQ=0, currentCategory='';
-const questions={
-    geometry:[
-        {q:"Sum of angles in triangle?", a:["180","360","90","270"], c:0},
-        {q:"Hexagon sides?", a:["5","6","7","8"], c:1}
-    ],
-    algebra:[
-        {q:"2x+5=15, solve x?", a:["5","10","7.5","20"], c:0}
-    ],
-    calculus:[
-        {q:"Derivative of x²?", a:["x","2x","x²","2"], c:1}
-    ]
-};
-
-function showCategories(){
-    hideAllScreens();
-    document.getElementById('categoryScreen').classList.remove('hidden');
-}
-
-function startGame(cat){
-    currentCategory=cat; score=0; currentQ=0;
-    hideAllScreens();
-    document.getElementById('gameScreen').classList.remove('hidden');
-    loadQuestion();
-}
-
+// Standard quiz functions
+function showCategories(){document.getElementById('startScreen').classList.add('hidden'); document.getElementById('resultsScreen').classList.add('hidden'); document.getElementById('categoryScreen').classList.remove('hidden');}
+function startGame(cat){currentCategory=cat; score=0; currentQuestion=0; document.getElementById('categoryScreen').classList.add('hidden'); document.getElementById('gameScreen').classList.remove('hidden'); loadQuestion();}
 function loadQuestion(){
-    const qlist = questions[currentCategory];
-    if(currentQ >= qlist.length){
-        showResults();
-        return;
-    }
-    const q = qlist[currentQ];
-    document.getElementById('question').textContent = q.q;
-    document.getElementById('score').textContent = `Score: ${score}`;
-    const answersDiv = document.getElementById('answers');
-    answersDiv.innerHTML='';
-    q.a.forEach((ans,i)=>{
-        const btn = document.createElement('button');
-        btn.textContent = ans;
-        btn.onclick = ()=>checkAnswer(i,q.c,btn);
+    if(currentQuestion>=10){showResults(); return;}
+    attempted=false; const categoryQuestions=questions[currentCategory]; const randomQ=categoryQuestions[Math.floor(Math.random()*categoryQuestions.length)];
+    document.getElementById('question').textContent=randomQ.q;
+    document.getElementById('progress').textContent=`Question ${currentQuestion+1}/10`;
+    document.getElementById('score').textContent=`Score: ${score}`;
+    const answersDiv=document.getElementById('answers'); answersDiv.innerHTML='';
+    randomQ.a.forEach((answer,index)=>{
+        const btn=document.createElement('button');
+        btn.className='answer-btn'; btn.textContent=answer;
+        btn.onclick=()=>{if(index===randomQ.c){btn.classList.add('correct'); if(!attempted){score+=10; document.getElementById('score').textContent=`Score: ${score}`;} setTimeout(()=>{currentQuestion++; loadQuestion();},1000);}else{btn.classList.add('incorrect'); attempted=true; setTimeout(()=>{btn.classList.remove('incorrect');},500);}};
         answersDiv.appendChild(btn);
     });
 }
+function showResults(){document.getElementById('gameScreen').classList.add('hidden'); document.getElementById('finalScore').textContent=`Final Score: ${score}/100`; document.getElementById('resultsScreen').classList.remove('hidden');}
 
-function checkAnswer(sel,correct,btn){
-    if(sel===correct){ btn.style.background='green'; score+=10; }
-    else{ btn.style.background='red'; }
-    currentQ++;
-    setTimeout(loadQuestion,800);
-}
-
-function showResults(){
-    hideAllScreens();
-    document.getElementById('resultsScreen').classList.remove('hidden');
-    document.getElementById('finalScore').textContent=`Score: ${score}`;
-}
-
-function hideAllScreens(){
-    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
-}
-
-// ------------------ Resize ------------------
-window.addEventListener('resize',()=>{
-    camera.aspect = window.innerWidth/window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth,window.innerHeight);
-});
-
+window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight);});
 initScene();
 </script>
 </body>
