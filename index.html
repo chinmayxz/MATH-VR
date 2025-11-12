@@ -66,35 +66,36 @@ p { color:#aaddff; font-size:1.1em; margin:15px 0; }
 </div>
 
 <div id="controls">
-    <p>Look at buttons to select in VR</p>
+    <p>Point controller at buttons and pull trigger</p>
     <p>Drag to look around (Desktop)</p>
 </div>
 
 <script>
-let scene, camera, renderer, vrUIGroup, reticle;
+let scene, camera, renderer, vrUIGroup, controllers = [];
 let score = 0, currentQuestion = 0, attempted = false, currentCategory = '';
 let isVRMode = false;
 let vrButtons = [];
 let currentVRScreen = 'start';
+let hoveredButton = null;
 
 const questions = {
     geometry: [
-        {q:"What is the sum of angles in a triangle?", a:["180°","360°","90°","270°"], c:0},
-        {q:"How many sides does a hexagon have?", a:["5","6","7","8"], c:1},
-        {q:"What is the area of a circle with radius 5?", a:["78.5","31.4","15.7","157"], c:0},
-        {q:"What is the perimeter of a square with side 4?", a:["8","12","16","20"], c:2},
-        {q:"How many faces does a cube have?", a:["4","6","8","12"], c:1},
-        {q:"What is the volume of a cube with side 3?", a:["9","27","18","12"], c:1},
-        {q:"How many degrees in a right angle?", a:["45°","90°","180°","360°"], c:1},
-        {q:"What is the circumference of circle radius 2?", a:["6.28","12.56","3.14","9.42"], c:1},
-        {q:"How many edges does a cube have?", a:["6","8","12","16"], c:2},
-        {q:"Area of rectangle length 5 width 3?", a:["8","15","18","20"], c:1}
+        {q:"Sum of angles in triangle?", a:["180°","360°","90°","270°"], c:0},
+        {q:"Sides in hexagon?", a:["5","6","7","8"], c:1},
+        {q:"Circle area, radius 5?", a:["78.5","31.4","15.7","157"], c:0},
+        {q:"Square perimeter, side 4?", a:["8","12","16","20"], c:2},
+        {q:"Faces on a cube?", a:["4","6","8","12"], c:1},
+        {q:"Cube volume, side 3?", a:["9","27","18","12"], c:1},
+        {q:"Degrees in right angle?", a:["45°","90°","180°","360°"], c:1},
+        {q:"Circle circumference, r=2?", a:["6.28","12.56","3.14","9.42"], c:1},
+        {q:"Edges on a cube?", a:["6","8","12","16"], c:2},
+        {q:"Rectangle area: 5×3?", a:["8","15","18","20"], c:1}
     ],
     algebra: [
-        {q:"Solve for x: 2x + 5 = 15", a:["5","10","7.5","20"], c:0},
-        {q:"What is x² when x = 4?", a:["8","16","12","20"], c:1},
+        {q:"Solve: 2x + 5 = 15", a:["5","10","7.5","20"], c:0},
+        {q:"x² when x = 4?", a:["8","16","12","20"], c:1},
         {q:"Simplify: 3x + 2x", a:["5x","6x","5x²","x⁵"], c:0},
-        {q:"What is 3 × (4 + 2)?", a:["14","18","20","12"], c:1},
+        {q:"Calculate: 3×(4+2)", a:["14","18","20","12"], c:1},
         {q:"Solve: x - 7 = 3", a:["10","4","-4","7"], c:0},
         {q:"What is 2³?", a:["6","8","9","16"], c:1},
         {q:"Simplify: 4x - x", a:["3x","4x","5x","3"], c:0},
@@ -103,16 +104,16 @@ const questions = {
         {q:"What is 5²?", a:["10","15","25","50"], c:2}
     ],
     calculus: [
-        {q:"What is the derivative of x²?", a:["x","2x","x²","2"], c:1},
-        {q:"What is ∫x dx?", a:["x","x²","x²/2 + C","2x"], c:2},
-        {q:"Derivative of a constant?", a:["1","0","x","Undefined"], c:1},
-        {q:"What is the derivative of 3x?", a:["3","3x","x","0"], c:0},
-        {q:"What is ∫3 dx?", a:["3","3x","3x + C","x"], c:2},
+        {q:"Derivative of x²?", a:["x","2x","x²","2"], c:1},
+        {q:"Integral ∫x dx?", a:["x","x²","x²/2+C","2x"], c:2},
+        {q:"Derivative of constant?", a:["1","0","x","?"], c:1},
+        {q:"Derivative of 3x?", a:["3","3x","x","0"], c:0},
+        {q:"Integral ∫3 dx?", a:["3","3x","3x+C","x"], c:2},
         {q:"Derivative of x³?", a:["3x","3x²","x²","3"], c:1},
-        {q:"What is d/dx(sin x)?", a:["cos x","-cos x","sin x","-sin x"], c:0},
-        {q:"What is ∫2x dx?", a:["2x","x²","x² + C","2"], c:2},
+        {q:"d/dx(sin x)?", a:["cos x","-cos x","sin x","-sin x"], c:0},
+        {q:"Integral ∫2x dx?", a:["2x","x²","x²+C","2"], c:2},
         {q:"Derivative of 5x²?", a:["5x","10x","5","10"], c:1},
-        {q:"Power rule for d/dx(x^n)?", a:["nx^n","nx^(n-1)","x^n","n"], c:1}
+        {q:"Power rule d/dx(x^n)?", a:["nx^n","nx^(n-1)","x^n","n"], c:1}
     ]
 };
 
@@ -122,8 +123,8 @@ function initScene(){
     scene.fog = new THREE.Fog(0x87ceeb,50,200);
 
     camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-    camera.position.set(0,10,30);
-    camera.lookAt(0,5,0);
+    camera.position.set(0,1.6,3);
+    camera.lookAt(0,1.6,0);
 
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth,window.innerHeight);
@@ -139,6 +140,7 @@ function initScene(){
     create360Environment();
     createEnvironmentObjects();
     createVRUI();
+    setupVRControllers();
     setupVRButton();
     animate();
 }
@@ -147,18 +149,20 @@ function create360Environment(){
     const geometry = new THREE.SphereGeometry(500,60,40);
     geometry.scale(-1,1,1);
     const canvas = document.createElement('canvas');
-    canvas.width=1024; canvas.height=512;
+    canvas.width=2048; canvas.height=1024;
     const ctx = canvas.getContext('2d');
     const gradient = ctx.createLinearGradient(0,0,0,canvas.height);
     gradient.addColorStop(0,'#1a2980'); gradient.addColorStop(1,'#26d0ce');
     ctx.fillStyle = gradient; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    for(let i=0;i<10;i++){ 
+    for(let i=0;i<15;i++){ 
         ctx.beginPath(); 
-        ctx.arc(Math.random()*canvas.width,Math.random()*canvas.height/2,30+Math.random()*50,0,Math.PI*2); 
+        ctx.arc(Math.random()*canvas.width,Math.random()*canvas.height/2,50+Math.random()*80,0,Math.PI*2); 
         ctx.fill(); 
     }
     const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
     const material = new THREE.MeshBasicMaterial({map:texture});
     scene.add(new THREE.Mesh(geometry,material));
 }
@@ -168,7 +172,7 @@ function createEnvironmentObjects(){
         new THREE.CylinderGeometry(25,25,1,32), 
         new THREE.MeshPhongMaterial({color:0x1e90ff,transparent:true,opacity:0.7,shininess:100})
     );
-    pool.position.y=0; 
+    pool.position.y=-1; 
     scene.add(pool);
 
     for(let i=0;i<3;i++){
@@ -176,7 +180,7 @@ function createEnvironmentObjects(){
             new THREE.BoxGeometry(15,40,15), 
             new THREE.MeshPhongMaterial({color:0x808080})
         );
-        cliff.position.set(Math.cos(i*Math.PI*2/3)*30,20,Math.sin(i*Math.PI*2/3)*30);
+        cliff.position.set(Math.cos(i*Math.PI*2/3)*30,19,Math.sin(i*Math.PI*2/3)*30);
         scene.add(cliff);
     }
 
@@ -203,41 +207,118 @@ function createEnvironmentObjects(){
         leaves.position.y=6; 
         trunk.add(leaves);
         const angle=(i/15)*Math.PI*2, radius=35+Math.random()*10;
-        trunk.position.set(Math.cos(angle)*radius,4,Math.sin(angle)*radius);
+        trunk.position.set(Math.cos(angle)*radius,3,Math.sin(angle)*radius);
         scene.add(trunk);
     }
 }
 
+function setupVRControllers(){
+    for(let i=0; i<=1; i++){
+        const controller = renderer.xr.getController(i);
+        controller.addEventListener('selectstart', onSelectStart);
+        controller.addEventListener('selectend', onSelectEnd);
+        scene.add(controller);
+        controllers.push(controller);
+        
+        // Controller ray
+        const geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0,0,0),
+            new THREE.Vector3(0,0,-5)
+        ]);
+        const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({color:0x00ffff}));
+        controller.add(line);
+    }
+}
+
+function onSelectStart(event){
+    const controller = event.target;
+    checkControllerIntersection(controller, true);
+}
+
+function onSelectEnd(event){
+    // Click completed
+}
+
+function checkControllerIntersection(controller, clicked = false){
+    if(vrButtons.length === 0) return;
+    
+    const tempMatrix = new THREE.Matrix4();
+    tempMatrix.identity().extractRotation(controller.matrixWorld);
+    
+    const raycaster = new THREE.Raycaster();
+    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    
+    const intersects = raycaster.intersectObjects(vrButtons);
+    
+    if(intersects.length > 0){
+        const button = intersects[0].object;
+        if(clicked && button.userData.action){
+            button.userData.action();
+            
+            // Visual feedback
+            const originalScale = button.scale.clone();
+            button.scale.multiplyScalar(0.95);
+            setTimeout(() => {
+                button.scale.copy(originalScale);
+            }, 100);
+        }
+        return button;
+    }
+    return null;
+}
+
 function createVRUI(){
     vrUIGroup = new THREE.Group();
-    vrUIGroup.position.set(0, 1.6, -3);
+    vrUIGroup.position.set(0, 1.6, -2.5);
     scene.add(vrUIGroup);
-    
-    // Create reticle for gaze
-    const reticleGeo = new THREE.RingGeometry(0.008, 0.012, 32);
-    const reticleMat = new THREE.MeshBasicMaterial({color: 0x00ffff, side: THREE.DoubleSide});
-    reticle = new THREE.Mesh(reticleGeo, reticleMat);
-    reticle.position.z = -2;
-    camera.add(reticle);
-    scene.add(camera);
     
     updateVRUI();
 }
 
-function createTextCanvas(text, width, height, bgColor, textColor, fontSize = 60){
+function createTextCanvas(text, width, height, bgColor, textColor, fontSize = 80){
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     
+    // Anti-aliasing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // Background with rounded corners
     ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, width, height);
+    const radius = 20;
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(width - radius, 0);
+    ctx.quadraticCurveTo(width, 0, width, radius);
+    ctx.lineTo(width, height - radius);
+    ctx.quadraticCurveTo(width, height, width - radius, height);
+    ctx.lineTo(radius, height);
+    ctx.quadraticCurveTo(0, height, 0, height - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Add subtle border
+    ctx.strokeStyle = 'rgba(0,200,255,0.5)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
+    // Text with shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
     
     ctx.fillStyle = textColor;
-    ctx.font = `${fontSize}px Arial`;
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
+    // Word wrap
     const words = text.split(' ');
     const lines = [];
     let currentLine = '';
@@ -245,45 +326,72 @@ function createTextCanvas(text, width, height, bgColor, textColor, fontSize = 60
     words.forEach(word => {
         const testLine = currentLine + word + ' ';
         const metrics = ctx.measureText(testLine);
-        if (metrics.width > width - 40 && currentLine !== '') {
-            lines.push(currentLine);
+        if (metrics.width > width - 80 && currentLine !== '') {
+            lines.push(currentLine.trim());
             currentLine = word + ' ';
         } else {
             currentLine = testLine;
         }
     });
-    lines.push(currentLine);
+    lines.push(currentLine.trim());
     
-    const lineHeight = fontSize * 1.2;
+    const lineHeight = fontSize * 1.3;
     const startY = (height - (lines.length * lineHeight)) / 2 + fontSize / 2;
     
     lines.forEach((line, i) => {
-        ctx.fillText(line.trim(), width / 2, startY + i * lineHeight);
+        ctx.fillText(line, width / 2, startY + i * lineHeight);
     });
     
     return canvas;
 }
 
-function createVRButton(text, x, y, action, color = '#0066cc'){
-    const canvas = createTextCanvas(text, 512, 128, color, '#ffffff', 50);
+function createVRButton(text, x, y, action, color = '#0066cc', isAnswer = false){
+    const width = isAnswer ? 2048 : 1536;
+    const height = isAnswer ? 384 : 320;
+    const canvas = createTextCanvas(text, width, height, color, '#ffffff', isAnswer ? 70 : 80);
     const texture = new THREE.CanvasTexture(canvas);
-    const geometry = new THREE.PlaneGeometry(1.5, 0.4);
-    const material = new THREE.MeshBasicMaterial({map: texture, transparent: true});
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    
+    const buttonWidth = isAnswer ? 2.2 : 1.8;
+    const buttonHeight = isAnswer ? 0.42 : 0.38;
+    
+    const geometry = new THREE.PlaneGeometry(buttonWidth, buttonHeight);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture, 
+        transparent: true,
+        side: THREE.DoubleSide
+    });
     const button = new THREE.Mesh(geometry, material);
     button.position.set(x, y, 0);
-    button.userData = {action: action, defaultColor: color, text: text};
+    button.userData = {
+        action: action, 
+        defaultColor: color, 
+        text: text,
+        isAnswer: isAnswer
+    };
     vrUIGroup.add(button);
     vrButtons.push(button);
     return button;
 }
 
-function createVRPanel(text, x, y, width, height, bgColor = '#001428'){
-    const canvas = createTextCanvas(text, 1024, 512, bgColor, '#aaddff', 45);
+function createVRPanel(text, x, y, width, height, bgColor = '#001428', fontSize = 70){
+    const canvas = createTextCanvas(text, 2048, 768, bgColor, '#aaddff', fontSize);
     const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    
     const geometry = new THREE.PlaneGeometry(width, height);
-    const material = new THREE.MeshBasicMaterial({map: texture, transparent: true, opacity: 0.95});
+    const material = new THREE.MeshBasicMaterial({
+        map: texture, 
+        transparent: true, 
+        opacity: 0.95,
+        side: THREE.DoubleSide
+    });
     const panel = new THREE.Mesh(geometry, material);
-    panel.position.set(x, y, 0);
+    panel.position.set(x, y, 0.01);
     vrUIGroup.add(panel);
     return panel;
 }
@@ -299,31 +407,31 @@ function updateVRUI(){
     clearVRUI();
     
     if(currentVRScreen === 'start'){
-        createVRPanel('VR MATH TRIVIA', 0, 1.5, 3, 0.6, '#001428');
-        createVRPanel('Test your math knowledge!', 0, 0.9, 3, 0.4, '#001428');
-        createVRButton('START GAME', 0, 0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
+        createVRPanel('VR MATH TRIVIA', 0, 0.9, 3, 0.5, '#001428', 90);
+        createVRPanel('Test your math knowledge!', 0, 0.4, 3, 0.35, '#001a40', 60);
+        createVRButton('START GAME', 0, -0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
     }
     else if(currentVRScreen === 'category'){
-        createVRPanel('CHOOSE CATEGORY', 0, 1.5, 3, 0.6, '#001428');
-        createVRButton('GEOMETRY', 0, 0.7, () => startVRGame('geometry'));
-        createVRButton('ALGEBRA', 0, 0.1, () => startVRGame('algebra'));
-        createVRButton('CALCULUS', 0, -0.5, () => startVRGame('calculus'));
+        createVRPanel('CHOOSE CATEGORY', 0, 0.9, 3, 0.5, '#001428', 85);
+        createVRButton('GEOMETRY', 0, 0.2, () => startVRGame('geometry'));
+        createVRButton('ALGEBRA', 0, -0.3, () => startVRGame('algebra'));
+        createVRButton('CALCULUS', 0, -0.8, () => startVRGame('calculus'));
     }
     else if(currentVRScreen === 'game'){
         const q = questions[currentCategory][currentQuestion % questions[currentCategory].length];
-        createVRPanel(`Score: ${score}  |  Question ${currentQuestion + 1}/10`, 0, 1.8, 3.5, 0.4, '#001428');
-        createVRPanel(q.q, 0, 1.2, 3.5, 0.6, '#001a40');
+        createVRPanel(`Score: ${score}  |  Q ${currentQuestion + 1}/10`, 0, 1.1, 3.5, 0.35, '#001428', 65);
+        createVRPanel(q.q, 0, 0.7, 3.5, 0.5, '#001a40', 65);
         
         q.a.forEach((answer, i) => {
-            const y = 0.5 - i * 0.35;
-            createVRButton(answer, 0, y, () => checkVRAnswer(i, q.c), '#1a5080');
+            const y = 0.15 - i * 0.5;
+            createVRButton(answer, 0, y, () => checkVRAnswer(i, q.c), '#1a5080', true);
         });
     }
     else if(currentVRScreen === 'results'){
-        createVRPanel('ROUND COMPLETE!', 0, 1.5, 3, 0.6, '#001428');
-        createVRPanel(`Final Score: ${score}/100`, 0, 0.9, 3, 0.5, '#001a40');
-        createVRButton('PLAY AGAIN', 0, 0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
-        createVRButton('MAIN MENU', 0, -0.4, () => { currentVRScreen = 'start'; updateVRUI(); });
+        createVRPanel('ROUND COMPLETE!', 0, 0.9, 3, 0.5, '#001428', 85);
+        createVRPanel(`Final Score: ${score}/100`, 0, 0.4, 3, 0.45, '#001a40', 75);
+        createVRButton('PLAY AGAIN', 0, -0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
+        createVRButton('MAIN MENU', 0, -0.7, () => { currentVRScreen = 'start'; updateVRUI(); });
     }
 }
 
@@ -348,7 +456,7 @@ function checkVRAnswer(selectedIndex, correctIndex){
                 currentVRScreen = 'results';
             }
             updateVRUI();
-        }, 800);
+        }, 600);
     } else {
         attempted = true;
     }
@@ -379,7 +487,7 @@ function toggleVR(){
         
         if('xr' in navigator){
             navigator.xr.requestSession('immersive-vr', {
-                optionalFeatures: ['local-floor', 'bounded-floor']
+                optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
             }).then((session) => {
                 renderer.xr.setSession(session);
                 isVRMode = true;
@@ -404,44 +512,64 @@ function toggleVR(){
     }
 }
 
-function checkVRGaze(){
+function updateControllerHighlights(){
     if(!isVRMode || vrButtons.length === 0) return;
     
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    let anyHovered = false;
     
-    const intersects = raycaster.intersectObjects(vrButtons);
-    
-    vrButtons.forEach(btn => {
-        const canvas = createTextCanvas(btn.userData.text, 512, 128, btn.userData.defaultColor, '#ffffff', 50);
-        btn.material.map = new THREE.CanvasTexture(canvas);
-        btn.material.needsUpdate = true;
+    controllers.forEach(controller => {
+        const hoveredBtn = checkControllerIntersection(controller, false);
+        
+        if(hoveredBtn && hoveredBtn !== hoveredButton){
+            // Highlight this button
+            const canvas = createTextCanvas(
+                hoveredBtn.userData.text, 
+                hoveredBtn.userData.isAnswer ? 2048 : 1536, 
+                hoveredBtn.userData.isAnswer ? 384 : 320,
+                '#00aaff', 
+                '#ffffff', 
+                hoveredBtn.userData.isAnswer ? 70 : 80
+            );
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            hoveredBtn.material.map = texture;
+            hoveredBtn.material.needsUpdate = true;
+            hoveredBtn.scale.set(1.05, 1.05, 1);
+            hoveredButton = hoveredBtn;
+            anyHovered = true;
+        }
     });
     
-    if(intersects.length > 0){
-        const btn = intersects[0].object;
-        const canvas = createTextCanvas(btn.userData.text, 512, 128, '#00ccff', '#ffffff', 50);
-        btn.material.map = new THREE.CanvasTexture(canvas);
-        btn.material.needsUpdate = true;
-        
-        if(btn.userData.gazeTime === undefined) btn.userData.gazeTime = Date.now();
-        
-        if(Date.now() - btn.userData.gazeTime > 1500){
-            btn.userData.action();
-            btn.userData.gazeTime = undefined;
-        }
-    } else {
-        vrButtons.forEach(btn => btn.userData.gazeTime = undefined);
+    if(!anyHovered && hoveredButton){
+        // Reset previous button
+        const canvas = createTextCanvas(
+            hoveredButton.userData.text, 
+            hoveredButton.userData.isAnswer ? 2048 : 1536, 
+            hoveredButton.userData.isAnswer ? 384 : 320,
+            hoveredButton.userData.defaultColor, 
+            '#ffffff', 
+            hoveredButton.userData.isAnswer ? 70 : 80
+        );
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        hoveredButton.material.map = texture;
+        hoveredButton.material.needsUpdate = true;
+        hoveredButton.scale.set(1, 1, 1);
+        hoveredButton = null;
     }
 }
 
 function animate(){
     renderer.setAnimationLoop(() => {
-        if(!isVRMode){
-            camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
-            camera.lookAt(0, 5, 0);
+        if(isVRMode){
+            updateControllerHighlights();
         } else {
-            checkVRGaze();
+            camera.position.x = Math.sin(Date.now() * 0.0002) * 2 + 0;
+            camera.lookAt(0, 1.6, 0);
         }
         
         const particles = scene.children.find(c => c instanceof THREE.Points);
@@ -520,16 +648,4 @@ function loadQuestion(){
 function showResults(){
     document.getElementById('gameScreen').classList.add('hidden'); 
     document.getElementById('finalScore').textContent = `Final Score: ${score}/100`; 
-    document.getElementById('resultsScreen').classList.remove('hidden');
-}
-
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight; 
-    camera.updateProjectionMatrix(); 
-    renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-initScene();
-</script>
-</body>
-</html>
+    document.getElementById('resultsScreen
