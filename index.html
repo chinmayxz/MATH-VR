@@ -31,7 +31,6 @@ p { color:#aaddff; font-size:1.1em; margin:15px 0; }
 #vrButton:hover { background: linear-gradient(135deg,#9b30ff,#a07aff); }
 #vrButton.vr-active { background: linear-gradient(135deg,#ff4500,#ff6347); }
 #controls { position:absolute; bottom:20px; left:20px; color:white; background:rgba(0,0,0,0.5); padding:10px; border-radius:5px; pointer-events:none; z-index:100; }
-#controls.vr-active { pointer-events:all; }
 </style>
 </head>
 <body>
@@ -67,26 +66,29 @@ p { color:#aaddff; font-size:1.1em; margin:15px 0; }
 </div>
 
 <div id="controls">
-    <p>Drag to look around</p>
-    <p>Scroll to zoom</p>
+    <p>Look at buttons to select in VR</p>
+    <p>Drag to look around (Desktop)</p>
 </div>
 
 <script>
-let scene, camera, renderer;
+let scene, camera, renderer, vrUIGroup, reticle;
 let score = 0, currentQuestion = 0, attempted = false, currentCategory = '';
-let isVRMode = false, cameraRotation = {x:0,y:0};
+let isVRMode = false;
+let vrButtons = [];
+let currentVRScreen = 'start';
+
 const questions = {
     geometry: [
         {q:"What is the sum of angles in a triangle?", a:["180°","360°","90°","270°"], c:0},
         {q:"How many sides does a hexagon have?", a:["5","6","7","8"], c:1},
-        {q:"What is the area of a circle with radius 5? (Use π ≈ 3.14)", a:["78.5","31.4","15.7","157"], c:0},
+        {q:"What is the area of a circle with radius 5?", a:["78.5","31.4","15.7","157"], c:0},
         {q:"What is the perimeter of a square with side 4?", a:["8","12","16","20"], c:2},
         {q:"How many faces does a cube have?", a:["4","6","8","12"], c:1},
         {q:"What is the volume of a cube with side 3?", a:["9","27","18","12"], c:1},
         {q:"How many degrees in a right angle?", a:["45°","90°","180°","360°"], c:1},
-        {q:"What is the circumference of a circle with radius 2? (Use π ≈ 3.14)", a:["6.28","12.56","3.14","9.42"], c:1},
+        {q:"What is the circumference of circle radius 2?", a:["6.28","12.56","3.14","9.42"], c:1},
         {q:"How many edges does a cube have?", a:["6","8","12","16"], c:2},
-        {q:"What is the area of a rectangle with length 5 and width 3?", a:["8","15","18","20"], c:1}
+        {q:"Area of rectangle length 5 width 3?", a:["8","15","18","20"], c:1}
     ],
     algebra: [
         {q:"Solve for x: 2x + 5 = 15", a:["5","10","7.5","20"], c:0},
@@ -103,14 +105,14 @@ const questions = {
     calculus: [
         {q:"What is the derivative of x²?", a:["x","2x","x²","2"], c:1},
         {q:"What is ∫x dx?", a:["x","x²","x²/2 + C","2x"], c:2},
-        {q:"What is the derivative of a constant?", a:["1","0","x","Undefined"], c:1},
+        {q:"Derivative of a constant?", a:["1","0","x","Undefined"], c:1},
         {q:"What is the derivative of 3x?", a:["3","3x","x","0"], c:0},
         {q:"What is ∫3 dx?", a:["3","3x","3x + C","x"], c:2},
-        {q:"What is the derivative of x³?", a:["3x","3x²","x²","3"], c:1},
+        {q:"Derivative of x³?", a:["3x","3x²","x²","3"], c:1},
         {q:"What is d/dx(sin x)?", a:["cos x","-cos x","sin x","-sin x"], c:0},
         {q:"What is ∫2x dx?", a:["2x","x²","x² + C","2"], c:2},
-        {q:"What is the derivative of 5x²?", a:["5x","10x","5","10"], c:1},
-        {q:"What is the power rule for d/dx(x^n)?", a:["nx^n","nx^(n-1)","x^n","n"], c:1}
+        {q:"Derivative of 5x²?", a:["5x","10x","5","10"], c:1},
+        {q:"Power rule for d/dx(x^n)?", a:["nx^n","nx^(n-1)","x^n","n"], c:1}
     ]
 };
 
@@ -136,6 +138,7 @@ function initScene(){
 
     create360Environment();
     createEnvironmentObjects();
+    createVRUI();
     setupVRButton();
     animate();
 }
@@ -177,7 +180,6 @@ function createEnvironmentObjects(){
         scene.add(cliff);
     }
 
-    // Particles
     const particles = new THREE.BufferGeometry();
     const pos = new Float32Array(1000*3);
     for(let i=0;i<pos.length;i+=3){ 
@@ -189,7 +191,6 @@ function createEnvironmentObjects(){
     const particleMat = new THREE.PointsMaterial({color:0xffffff,size:0.3,transparent:true,opacity:0.8});
     scene.add(new THREE.Points(particles,particleMat));
 
-    // Trees
     for(let i=0;i<15;i++){
         const trunk = new THREE.Mesh(
             new THREE.CylinderGeometry(0.5,0.7,8,8),
@@ -207,13 +208,157 @@ function createEnvironmentObjects(){
     }
 }
 
-// Setup VR button with proper session handling
+function createVRUI(){
+    vrUIGroup = new THREE.Group();
+    vrUIGroup.position.set(0, 1.6, -3);
+    scene.add(vrUIGroup);
+    
+    // Create reticle for gaze
+    const reticleGeo = new THREE.RingGeometry(0.008, 0.012, 32);
+    const reticleMat = new THREE.MeshBasicMaterial({color: 0x00ffff, side: THREE.DoubleSide});
+    reticle = new THREE.Mesh(reticleGeo, reticleMat);
+    reticle.position.z = -2;
+    camera.add(reticle);
+    scene.add(camera);
+    
+    updateVRUI();
+}
+
+function createTextCanvas(text, width, height, bgColor, textColor, fontSize = 60){
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, width, height);
+    
+    ctx.fillStyle = textColor;
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+        const testLine = currentLine + word + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > width - 40 && currentLine !== '') {
+            lines.push(currentLine);
+            currentLine = word + ' ';
+        } else {
+            currentLine = testLine;
+        }
+    });
+    lines.push(currentLine);
+    
+    const lineHeight = fontSize * 1.2;
+    const startY = (height - (lines.length * lineHeight)) / 2 + fontSize / 2;
+    
+    lines.forEach((line, i) => {
+        ctx.fillText(line.trim(), width / 2, startY + i * lineHeight);
+    });
+    
+    return canvas;
+}
+
+function createVRButton(text, x, y, action, color = '#0066cc'){
+    const canvas = createTextCanvas(text, 512, 128, color, '#ffffff', 50);
+    const texture = new THREE.CanvasTexture(canvas);
+    const geometry = new THREE.PlaneGeometry(1.5, 0.4);
+    const material = new THREE.MeshBasicMaterial({map: texture, transparent: true});
+    const button = new THREE.Mesh(geometry, material);
+    button.position.set(x, y, 0);
+    button.userData = {action: action, defaultColor: color, text: text};
+    vrUIGroup.add(button);
+    vrButtons.push(button);
+    return button;
+}
+
+function createVRPanel(text, x, y, width, height, bgColor = '#001428'){
+    const canvas = createTextCanvas(text, 1024, 512, bgColor, '#aaddff', 45);
+    const texture = new THREE.CanvasTexture(canvas);
+    const geometry = new THREE.PlaneGeometry(width, height);
+    const material = new THREE.MeshBasicMaterial({map: texture, transparent: true, opacity: 0.95});
+    const panel = new THREE.Mesh(geometry, material);
+    panel.position.set(x, y, 0);
+    vrUIGroup.add(panel);
+    return panel;
+}
+
+function clearVRUI(){
+    while(vrUIGroup.children.length > 0){
+        vrUIGroup.remove(vrUIGroup.children[0]);
+    }
+    vrButtons = [];
+}
+
+function updateVRUI(){
+    clearVRUI();
+    
+    if(currentVRScreen === 'start'){
+        createVRPanel('VR MATH TRIVIA', 0, 1.5, 3, 0.6, '#001428');
+        createVRPanel('Test your math knowledge!', 0, 0.9, 3, 0.4, '#001428');
+        createVRButton('START GAME', 0, 0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
+    }
+    else if(currentVRScreen === 'category'){
+        createVRPanel('CHOOSE CATEGORY', 0, 1.5, 3, 0.6, '#001428');
+        createVRButton('GEOMETRY', 0, 0.7, () => startVRGame('geometry'));
+        createVRButton('ALGEBRA', 0, 0.1, () => startVRGame('algebra'));
+        createVRButton('CALCULUS', 0, -0.5, () => startVRGame('calculus'));
+    }
+    else if(currentVRScreen === 'game'){
+        const q = questions[currentCategory][currentQuestion % questions[currentCategory].length];
+        createVRPanel(`Score: ${score}  |  Question ${currentQuestion + 1}/10`, 0, 1.8, 3.5, 0.4, '#001428');
+        createVRPanel(q.q, 0, 1.2, 3.5, 0.6, '#001a40');
+        
+        q.a.forEach((answer, i) => {
+            const y = 0.5 - i * 0.35;
+            createVRButton(answer, 0, y, () => checkVRAnswer(i, q.c), '#1a5080');
+        });
+    }
+    else if(currentVRScreen === 'results'){
+        createVRPanel('ROUND COMPLETE!', 0, 1.5, 3, 0.6, '#001428');
+        createVRPanel(`Final Score: ${score}/100`, 0, 0.9, 3, 0.5, '#001a40');
+        createVRButton('PLAY AGAIN', 0, 0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
+        createVRButton('MAIN MENU', 0, -0.4, () => { currentVRScreen = 'start'; updateVRUI(); });
+    }
+}
+
+function startVRGame(category){
+    currentCategory = category;
+    score = 0;
+    currentQuestion = 0;
+    attempted = false;
+    currentVRScreen = 'game';
+    updateVRUI();
+}
+
+function checkVRAnswer(selectedIndex, correctIndex){
+    if(selectedIndex === correctIndex){
+        if(!attempted){
+            score += 10;
+        }
+        setTimeout(() => {
+            currentQuestion++;
+            attempted = false;
+            if(currentQuestion >= 10){
+                currentVRScreen = 'results';
+            }
+            updateVRUI();
+        }, 800);
+    } else {
+        attempted = true;
+    }
+}
+
 function setupVRButton(){
     const vrButton = document.getElementById('vrButton');
     
-    // Check if VR is supported
     if('xr' in navigator){
-        navigator.xr.isSessionSupported('immersive-vr').then((supported)=>{
+        navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
             if(!supported){
                 vrButton.textContent = 'VR Not Supported';
                 vrButton.disabled = true;
@@ -225,61 +370,80 @@ function setupVRButton(){
     }
 }
 
-// VR session toggle with proper error handling
 function toggleVR(){
     const vrButton = document.getElementById('vrButton');
-    const controls = document.getElementById('controls');
     
     if(!isVRMode){
-        // Enter VR Mode
         vrButton.textContent = 'Exit VR Mode';
         vrButton.classList.add('vr-active');
-        controls.classList.add('vr-active');
         
         if('xr' in navigator){
             navigator.xr.requestSession('immersive-vr', {
-                optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                optionalFeatures: ['local-floor', 'bounded-floor']
             }).then((session) => {
                 renderer.xr.setSession(session);
                 isVRMode = true;
+                document.getElementById('ui').style.display = 'none';
                 
-                // Handle session end
                 session.addEventListener('end', () => {
                     isVRMode = false;
                     vrButton.textContent = 'Enter VR Mode';
                     vrButton.classList.remove('vr-active');
-                    controls.classList.remove('vr-active');
+                    document.getElementById('ui').style.display = 'block';
                 });
             }).catch((err) => {
-                console.error('Failed to start VR session:', err);
+                console.error('VR Error:', err);
                 vrButton.textContent = 'Enter VR Mode';
                 vrButton.classList.remove('vr-active');
-                controls.classList.remove('vr-active');
-                alert('Failed to enter VR mode. Make sure you are using a VR-capable browser and device.');
+                alert('Failed to enter VR mode');
             });
         }
     } else {
-        // Exit VR Mode
         const session = renderer.xr.getSession();
-        if(session){
-            session.end();
+        if(session) session.end();
+    }
+}
+
+function checkVRGaze(){
+    if(!isVRMode || vrButtons.length === 0) return;
+    
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+    
+    const intersects = raycaster.intersectObjects(vrButtons);
+    
+    vrButtons.forEach(btn => {
+        const canvas = createTextCanvas(btn.userData.text, 512, 128, btn.userData.defaultColor, '#ffffff', 50);
+        btn.material.map = new THREE.CanvasTexture(canvas);
+        btn.material.needsUpdate = true;
+    });
+    
+    if(intersects.length > 0){
+        const btn = intersects[0].object;
+        const canvas = createTextCanvas(btn.userData.text, 512, 128, '#00ccff', '#ffffff', 50);
+        btn.material.map = new THREE.CanvasTexture(canvas);
+        btn.material.needsUpdate = true;
+        
+        if(btn.userData.gazeTime === undefined) btn.userData.gazeTime = Date.now();
+        
+        if(Date.now() - btn.userData.gazeTime > 1500){
+            btn.userData.action();
+            btn.userData.gazeTime = undefined;
         }
-        isVRMode = false;
-        vrButton.textContent = 'Enter VR Mode';
-        vrButton.classList.remove('vr-active');
-        controls.classList.remove('vr-active');
+    } else {
+        vrButtons.forEach(btn => btn.userData.gazeTime = undefined);
     }
 }
 
 function animate(){
     renderer.setAnimationLoop(() => {
-        // Smooth camera movement in non-VR mode
         if(!isVRMode){
             camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
             camera.lookAt(0, 5, 0);
+        } else {
+            checkVRGaze();
         }
         
-        // Animate particles
         const particles = scene.children.find(c => c instanceof THREE.Points);
         if(particles){
             const positions = particles.geometry.attributes.position.array;
@@ -294,7 +458,6 @@ function animate(){
     });
 }
 
-// Standard quiz functions
 function showCategories(){
     document.getElementById('startScreen').classList.add('hidden'); 
     document.getElementById('resultsScreen').classList.add('hidden'); 
