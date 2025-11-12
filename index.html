@@ -174,7 +174,6 @@ function toggleVR(){
         vrButton.textContent='Exit VR Mode';
         vrButton.classList.add('vr-active');
         controls.classList.add('vr-active');
-        document.getElementById('ui').style.display='none';
         renderer.xr.setSession(null);
         navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor']}).then(session=>{
             renderer.xr.setSession(session);
@@ -183,11 +182,9 @@ function toggleVR(){
         vrButton.textContent='Enter VR Mode';
         vrButton.classList.remove('vr-active');
         controls.classList.remove('vr-active');
-        document.getElementById('ui').style.display='block';
         renderer.xr.getSession()?.end();
     }
     isVRMode=!isVRMode;
-}
 
 // VR gaze click for quiz (simple example)
 function setupVRControls(){
