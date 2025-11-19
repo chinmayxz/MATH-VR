@@ -23,7 +23,28 @@
 
   .category-btn { display:block; width:100%; margin:12px 0; padding:14px 18px; font-size:1.05em; border-radius:14px; text-align:left; }
   /* Pill option style */
-  .answer-btn { display:block; width:100%; text-align:left; padding:14px 20px; margin:10px 0; background:linear-gradient(135deg,#1a5080,#2a7090); color:#fff; border:none; font-size:1.05em; border-radius:28px; cursor:pointer; transition:all 0.18s; box-shadow:0 6px 18px rgba(0,0,0,0.25); }
+.answer-btn {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  padding: 16px 22px;
+  margin: 14px 0;
+  background: linear-gradient(135deg, #1a5080, #2a7090);
+  color: #fff;
+  border: none;
+  font-size: 1.15em;
+  border-radius: 32px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.30);
+  outline: none;
+}
+.answer-btn:hover {
+  transform: translateY(-2px);
+}
+
+  
   .answer-btn:hover { transform:translateY(-2px); }
   .answer-btn.correct { background: linear-gradient(135deg,#00aa00,#00ff66); color:#002200; box-shadow:0 8px 28px rgba(0,255,128,0.12); }
   .answer-btn.incorrect { background: linear-gradient(135deg,#aa0000,#ff6666); color:#330000; box-shadow:0 8px 28px rgba(255,60,60,0.12); }
