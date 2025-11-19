@@ -1,845 +1,729 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>VR Math Trivia</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; }
-#ui { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
-#startScreen,#categoryScreen,#gameScreen,#resultsScreen {
-    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    background: rgba(0,20,40,0.95); padding:40px; border-radius:20px; text-align:center;
-    pointer-events:all; box-shadow:0 10px 50px rgba(0,255,255,0.3); border:2px solid rgba(0,255,255,0.5);
-    max-width:600px; z-index:11;
-}
-h1 { color:#00ffff; margin:0 0 20px 0; font-size:2.5em; text-shadow:0 0 10px #00ffff; }
-h2 { color:#00ddff; margin:0 0 20px 0; font-size:1.8em; }
-button { background: linear-gradient(135deg, #0066cc, #00ccff); color:white; border:none; padding:15px 30px; margin:10px; font-size:1.1em; border-radius:10px; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 15px rgba(0,200,255,0.4); }
-button:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,200,255,0.6); }
-button:active { transform:translateY(0); }
-.category-btn { display:block; width:100%; margin:15px 0; }
-.answer-btn { display:block; width:100%; text-align:left; padding:15px 20px; margin:10px 0; background:linear-gradient(135deg,#1a5080,#2a7090); }
-.answer-btn.correct { background: linear-gradient(135deg,#00aa00,#00ff00); }
-.answer-btn.incorrect { background: linear-gradient(135deg,#aa0000,#ff0000); }
-#score { color:#ffff00; font-size:1.3em; margin:10px 0; text-shadow:0 0 5px #ffff00; }
-#progress { color:#aaddff; font-size:1.1em; margin:10px 0; }
-.hidden { display:none; }
-p { color:#aaddff; font-size:1.1em; margin:15px 0; }
-#vrButton { position:absolute; top:20px; right:20px; pointer-events:all; background:linear-gradient(135deg,#8a2be2,#9370db); z-index:100; }
-#vrButton:hover { background: linear-gradient(135deg,#9b30ff,#a07aff); }
-#vrButton.vr-active { background: linear-gradient(135deg,#ff4500,#ff6347); }
-#controls { position:absolute; bottom:20px; left:20px; color:white; background:rgba(0,0,0,0.5); padding:10px; border-radius:5px; pointer-events:none; z-index:100; }
+  /* --- Basic UI --- */
+  body { margin: 0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #07192b; }
+  #ui { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
+  #startScreen,#categoryScreen,#gameScreen,#resultsScreen {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      background: rgba(0,20,40,0.95); padding:30px; border-radius:18px; text-align:center;
+      pointer-events:all; box-shadow:0 10px 50px rgba(0,255,255,0.12); border:1px solid rgba(0,255,255,0.08);
+      max-width:640px; z-index:11;
+  }
+  h1 { color:#00ffff; margin:0 0 18px 0; font-size:2.1em; text-shadow:0 0 8px #00b7c7; font-family: Arial, Helvetica, sans-serif; }
+  h2 { color:#00ddff; margin:0 0 16px 0; font-size:1.6em; }
+  button { background: linear-gradient(135deg, #0066cc, #00ccff); color:white; border:none; padding:12px 22px; margin:10px; font-size:1.05em; border-radius:10px; cursor:pointer; transition:all 0.22s; pointer-events:all; box-shadow:0 6px 18px rgba(0,200,255,0.14); font-family: Arial, Helvetica, sans-serif; }
+  button:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,200,255,0.2); }
+  button:active { transform:translateY(0); }
+
+  .category-btn { display:block; width:100%; margin:12px 0; padding:14px 18px; font-size:1.05em; border-radius:14px; text-align:left; }
+  /* Pill option style */
+  .answer-btn { display:block; width:100%; text-align:left; padding:14px 20px; margin:10px 0; background:linear-gradient(135deg,#1a5080,#2a7090); color:#fff; border:none; font-size:1.05em; border-radius:28px; cursor:pointer; transition:all 0.18s; box-shadow:0 6px 18px rgba(0,0,0,0.25); }
+  .answer-btn:hover { transform:translateY(-2px); }
+  .answer-btn.correct { background: linear-gradient(135deg,#00aa00,#00ff66); color:#002200; box-shadow:0 8px 28px rgba(0,255,128,0.12); }
+  .answer-btn.incorrect { background: linear-gradient(135deg,#aa0000,#ff6666); color:#330000; box-shadow:0 8px 28px rgba(255,60,60,0.12); }
+
+  #score { color:#ffff00; font-size:1.15em; margin:10px 0; text-shadow:0 0 4px #ffff00; }
+  #progress { color:#aaddff; font-size:1.05em; margin:8px 0; }
+  .hidden { display:none; }
+  p { color:#aaddff; font-size:1.05em; margin:12px 0; }
+  #vrButton { position:absolute; top:18px; right:18px; pointer-events:all; background:linear-gradient(135deg,#8a2be2,#9370db); z-index:100; padding:10px 14px; border-radius:10px; color:white; border:none; box-shadow:0 6px 18px rgba(0,0,0,0.3); }
+  #vrButton:hover { background: linear-gradient(135deg,#9b30ff,#a07aff); }
+  #vrButton.vr-active { background: linear-gradient(135deg,#ff4500,#ff6347); }
+
+  #controls { position:absolute; bottom:18px; left:18px; color:white; background:rgba(0,0,0,0.45); padding:10px; border-radius:8px; pointer-events:none; z-index:100; font-size:0.95em; }
+  #feedback { margin-top:8px; font-size:1.05em; color:#ffcc66; min-height:1.4em; }
+
+  /* make small screens adapt */
+  @media (max-width:520px){
+    #startScreen,#categoryScreen,#gameScreen,#resultsScreen{ padding:20px; max-width:92%; }
+    h1{ font-size:1.6em; }
+  }
 </style>
 </head>
 <body>
-<div id="ui">
-    <div id="startScreen">
-        <h1>🌊 VR Math Trivia 🌊</h1>
-        <p>Test your math knowledge in a stunning waterfall environment!</p>
-        <button onclick="showCategories()">Start Game</button>
-    </div>
+  <div id="ui">
+      <div id="startScreen">
+          <h1>🌊 Math Trivia 🌊</h1>
+          <p>Test your math knowledge</p>
+          <button onclick="showCategories()">Start Game</button>
+      </div>
 
-    <div id="categoryScreen" class="hidden">
-        <h2>Choose Your Category</h2>
-        <button class="category-btn" onclick="startGame('geometry')">📐 Geometry</button>
-        <button class="category-btn" onclick="startGame('algebra')">🔢 Algebra</button>
-        <button class="category-btn" onclick="startGame('calculus')">📊 Calculus</button>
-    </div>
+      <div id="categoryScreen" class="hidden">
+          <h2>Choose Your Category</h2>
+          <button class="category-btn" onclick="startGame('geometry')">📐 Geometry</button>
+          <button class="category-btn" onclick="startGame('algebra')">🔢 Algebra</button>
+          <button class="category-btn" onclick="startGame('calculus')">📊 Calculus</button>
+      </div>
 
-    <div id="gameScreen" class="hidden">
-        <div id="score">Score: 0</div>
-        <div id="progress">Question 1/10</div>
-        <div id="question"></div>
-        <div id="answers"></div>
-    </div>
+      <div id="gameScreen" class="hidden">
+          <div id="score">Score: 0</div>
+          <div id="progress">Question 1/10</div>
+          <div id="question" style="color:#e6f7ff; font-size:1.2em; margin:12px 0;"></div>
+          <div id="answers"></div>
+          <div id="feedback"></div>
+      </div>
 
-    <div id="resultsScreen" class="hidden">
-        <h1>Round Complete! 🎉</h1>
-        <div id="finalScore"></div>
-        <button onclick="showCategories()">Play Again</button>
-        <button onclick="location.reload()">Main Menu</button>
-    </div>
-    
-    <button id="vrButton" onclick="toggleVR()">Enter VR Mode</button>
-</div>
+      <div id="resultsScreen" class="hidden">
+          <h1>Round Complete! 🎉</h1>
+          <div id="finalScore" style="color:#fff; font-size:1.15em; margin:10px 0;"></div>
+          <button onclick="showCategories()">Play Again</button>
+          <button onclick="location.reload()">Main Menu</button>
+      </div>
 
-<div id="controls">
-    <p>Point controller at buttons to select in VR</p>
-    <p>Drag to look around (Desktop)</p>
-</div>
+      <button id="vrButton" onclick="toggleVR()">Enter VR Mode</button>
+  </div>
+
+  <div id="controls">
+      <p>Point controller at buttons to select in VR</p>
+      <p>Drag to look around (Desktop)</p>
+  </div>
 
 <script>
+/* -------------------------
+   QUESTIONS (25 per category)
+   Each object: { q: "...", a: ["..","..","..",".."], c: indexOfCorrect }
+   ------------------------- */
+const questions = {
+  geometry: [
+    { q: "What is the sum of interior angles of a triangle?", a: ["90°", "180°", "270°", "360°"], c: 1 },
+    { q: "How many sides does a regular hexagon have?", a: ["5","6","7","8"], c: 1 },
+    { q: "Area of a circle with radius 3 (use π≈3.14)?", a: ["18.84","28.26","9.42","56.52"], c: 1 },
+    { q: "Perimeter of a square with side 7?", a: ["21","14","28","49"], c: 2 },
+    { q: "How many faces does a cube have?", a: ["4","6","8","12"], c: 1 },
+    { q: "Volume of cube side length 4?", a: ["16","64","32","48"], c: 1 },
+    { q: "How many degrees in a right angle?", a: ["45°","60°","90°","120°"], c: 2 },
+    { q: "Circumference of circle radius 1 (π≈3.14)?", a: ["3.14","6.28","1.57","9.42"], c: 1 },
+    { q: "How many edges does a cube have?", a: ["6","8","12","16"], c: 2 },
+    { q: "Area of rectangle length 6 width 4?", a: ["10","20","24","30"], c: 2 },
+    { q: "Interior angle of a regular pentagon (each)?", a: ["72°","90°","108°","120°"], c: 2 },
+    { q: "What is a right triangle's Pythagorean relation?", a: ["a^2+b^2=c^3","a+b=c","a^2+b^2=c^2","ac+bc=c^2"], c: 2 },
+    { q: "Area of triangle base 10 height 6?", a: ["30","60","40","15"], c: 0 },
+    { q: "A circle's diameter is 10; radius is?", a: ["5","10","20","2.5"], c: 0 },
+    { q: "How many vertices does a rectangular prism have?", a: ["6","8","10","12"], c: 1 },
+    { q: "What is the slope of a vertical line?", a: ["0","Undefined","1","-1"], c: 1 },
+    { q: "A trapezoid has bases 6 and 10 and height 4. Area?", a: ["32","16","64","40"], c: 0 },
+    { q: "Sum of exterior angles of any polygon equals?", a: ["360°","180°","90°","540°"], c: 0 },
+    { q: "If two angles are complementary, they add to?", a: ["90°","180°","360°","270°"], c: 0 },
+    { q: "Area of ellipse with a=3, b=2 (πab)?", a: ["6π","5π","3π","π"], c: 0 },
+    { q: "A regular octagon has each interior angle of?", a: ["135°","120°","112.5°","144°"], c: 0 },
+    { q: "What is the length of hypotenuse if legs are 3 and 4?", a: ["5","6","7","8"], c: 0 },
+    { q: "Volume of cylinder with r=2, h=5 (use π≈3.14)?", a: ["62.8","25.12","31.4","78.5"], c: 0 },
+    { q: "Area of equilateral triangle side 4 (√3/4 * s^2)?", a: ["4√3","3√3","√3","2√3"], c: 1 },
+    { q: "If scale of map is 1:1000, 1 cm equals?", a: ["100 m","10 m","1 km","1000 m"], c: 0 }
+  ],
+
+  algebra: [
+    { q: "Solve: 2x + 5 = 15", a: ["5","10","7.5","20"], c: 0 },
+    { q: "What is x² when x = 5?", a: ["10","15","25","5"], c: 2 },
+    { q: "Simplify: 3x + 2x", a: ["5x","6x","5x²","x⁵"], c: 0 },
+    { q: "What is 3 × (4 + 2)?", a: ["14","18","20","12"], c: 1 },
+    { q: "Solve: x - 7 = 3", a: ["10","4","-4","7"], c: 0 },
+    { q: "What is 2³?", a: ["6","8","9","16"], c: 1 },
+    { q: "Simplify: 4x - x", a: ["3x","4x","5x","3"], c: 0 },
+    { q: "What is √49?", a: ["6","7","8","9"], c: 1 },
+    { q: "Solve: 3x = 21", a: ["6","7","8","18"], c: 1 },
+    { q: "What is 5²?", a: ["10","15","25","50"], c: 2 },
+    { q: "If f(x)=2x+1, f(3)=", a: ["5","7","6","8"], c: 1 },
+    { q: "Factor: x^2 - 9", a: ["(x-3)(x+3)","(x-9)(x+1)","(x-1)(x+9)","Prime"], c: 0 },
+    { q: "Solve: x^2 = 16", a: ["2","4 or -4","8","-8"], c: 1 },
+    { q: "Simplify: (2x)(3x)", a: ["5x^2","6x^2","6x","5x"], c: 1 },
+    { q: "If x=2 and y=3, 2x + y = ?", a: ["7","8","10","6"], c: 0 },
+    { q: "Solve: 4(x-1)=12", a: ["2","4","5","7"], c: 2 },
+    { q: "If 5x=20, x=?", a: ["2","3","4","5"], c: 2 },
+    { q: "What is the reciprocal of 3/4?", a: ["4/3","3/4","-4/3","1/3"], c: 0 },
+    { q: "Simplify: (x^2)*(x^3)", a: ["x^5","x^6","x^9","x^1"], c: 0 },
+    { q: "Solve linear: 7 + 2x = 13", a: ["3","2","5","6"], c: 2 },
+    { q: "What is 10% of 200?", a: ["2","10","20","2000"], c: 2 },
+    { q: "If y = 3x and x = 4, y = ?", a: ["7","12","9","16"], c: 1 },
+    { q: "Expand: (x+2)(x+3)", a: ["x^2+5x+6","x^2+6x+5","x^2+3x+2","x^2+2x+3"], c: 0 },
+    { q: "What number solves x/5 = 6?", a: ["30","11","1.2","36"], c: 0 }
+  ],
+
+  calculus: [
+    { q: "What is the derivative of x^2?", a: ["x","2x","x^2","2"], c: 1 },
+    { q: "What is ∫ x dx ?", a: ["x","x^2","x^2/2 + C","2x"], c: 2 },
+    { q: "Derivative of a constant?", a: ["1","0","x","Undefined"], c: 1 },
+    { q: "What is the derivative of 3x?", a: ["3","3x","x","0"], c: 0 },
+    { q: "What is ∫ 3 dx ?", a: ["3","3x","3x + C","x"], c: 2 },
+    { q: "Derivative of x^3 ?", a: ["3x","3x^2","x^2","3"], c: 1 },
+    { q: "d/dx(sin x) = ?", a: ["cos x","-cos x","sin x","-sin x"], c: 0 },
+    { q: "What is ∫ 2x dx ?", a: ["2x","x^2","x^2 + C","2"], c: 2 },
+    { q: "Derivative of 5x^2 ?", a: ["5x","10x","5","10"], c: 1 },
+    { q: "Power rule: d/dx(x^n) = ?", a: ["nx^n","nx^(n-1)","x^n","n"], c: 1 },
+    { q: "∫ 0 dx = ?", a: ["1","0 + C","C","Undefined"], c: 2 },
+    { q: "What is derivative of ln x ?", a: ["1/x","ln x","x","0"], c: 0 },
+    { q: "d/dx(e^x) = ?", a: ["x e^(x-1)","e^x","e","1"], c: 1 },
+    { q: "∫ cos x dx = ?", a: ["sin x + C","-sin x + C","cos x + C","-cos x + C"], c: 0 },
+    { q: "Derivative of tan x = ?", a: ["sec^2 x","csc^2 x","tan x","1"], c: 0 },
+    { q: "If f'(x) = 0, f has a ?", a: ["root","critical point","asymptote","discontinuity"], c: 1 },
+    { q: "Second derivative of x^3 is ?", a: ["6x","3x^2","2x","3x"], c: 0 },
+    { q: "∫ 1/x dx = ?", a: ["ln|x| + C","1/x + C","x + C","e^x + C"], c: 0 },
+    { q: "Derivative of sin(2x) ?", a: ["2cos(2x)","cos(2x)","2sin(2x)","sin(2x)"], c: 0 },
+    { q: "Derivative of x^4 is ?", a: ["4x^3","x^3","x^4","16x^3"], c: 0 },
+    { q: "∫ 4x^3 dx = ?", a: ["x^4 + C","x^4/4 + C","4x^4 + C","x^3 + C"], c: 0 },
+    { q: "If f(x)=x^2, average rate of change from 1 to 3?", a: ["4","3","8","2"], c: 0 },
+    { q: "If derivative is positive, function is ?", a: ["decreasing","increasing","constant","concave"], c: 1 },
+    { q: "d/dx(arctan x) = ?", a: ["1/(1+x^2)","1/(1-x^2)","arctan'","ln(1+x^2)"], c: 0 }
+  ]
+};
+
+/* -------------------------
+   GLOBALS
+   ------------------------- */
 let scene, camera, renderer, vrUIGroup, controller1, controller2;
 let score = 0, currentQuestion = 0, attempted = false, currentCategory = '';
 let isVRMode = false;
-let vrButtons = [];
-let currentVRScreen = 'start';
+let vrButtons = [], selectedButton = null, currentVRScreen = 'start';
+let shuffledQuestions = []; // sequence for current round (non-VR and VR)
+const QUESTIONS_PER_ROUND = 10;
 
-const questions = {
-    geometry: [
-        {q:"What is the sum of angles in a triangle?", a:["180°","360°","90°","270°"], c:0},
-        {q:"How many sides does a hexagon have?", a:["5","6","7","8"], c:1},
-        {q:"What is the area of a circle with radius 5?", a:["78.5","31.4","15.7","157"], c:0},
-        {q:"What is the perimeter of a square with side 4?", a:["8","12","16","20"], c:2},
-        {q:"How many faces does a cube have?", a:["4","6","8","12"], c:1},
-        {q:"What is the volume of a cube with side 3?", a:["9","27","18","12"], c:1},
-        {q:"How many degrees in a right angle?", a:["45°","90°","180°","360°"], c:1},
-        {q:"What is the circumference of circle radius 2?", a:["6.28","12.56","3.14","9.42"], c:1},
-        {q:"How many edges does a cube have?", a:["6","8","12","16"], c:2},
-        {q:"Area of rectangle length 5 width 3?", a:["8","15","18","20"], c:1},
-        {q:"How many sides does an octagon have?", a:["6","7","8","9"], c:2},
-        {q:"What is the sum of angles in a quadrilateral?", a:["180°","270°","360°","450°"], c:2},
-        {q:"What is the area of a triangle with base 6 and height 4?", a:["10","12","24","48"], c:1},
-        {q:"How many vertices does a pentagon have?", a:["4","5","6","7"], c:1},
-        {q:"What is the volume of a sphere with radius 3?", a:["36π","27π","113","42π"], c:0},
-        {q:"How many faces does a rectangular prism have?", a:["4","5","6","8"], c:2},
-        {q:"What is the diagonal of a square with side 5?", a:["5","7.07","10","5√2"], c:3},
-        {q:"How many degrees in a straight angle?", a:["90°","120°","180°","360°"], c:2},
-        {q:"What is the area of a circle with diameter 10?", a:["31.4","78.5","314","100"], c:1},
-        {q:"How many sides does a decagon have?", a:["8","9","10","12"], c:2},
-        {q:"What is the perimeter of a rectangle 8×3?", a:["11","22","24","30"], c:1},
-        {q:"How many diagonals does a square have?", a:["1","2","3","4"], c:1},
-        {q:"What is 180° in radians?", a:["2π","π","π/2","3π"], c:1},
-        {q:"Area of parallelogram base 7 height 4?", a:["11","14","28","56"], c:2},
-        {q:"How many edges does a pyramid have?", a:["4","5","6","8"], c:3},
-        {q:"What is the sum of interior angles of a pentagon?", a:["360°","450°","540°","630°"], c:2},
-        {q:"Volume of cylinder radius 2 height 5?", a:["20π","10π","40π","15π"], c:0},
-        {q:"What is the area of trapezoid bases 6,10 height 4?", a:["32","40","64","80"], c:0},
-        {q:"How many sides does a nonagon have?", a:["7","8","9","10"], c:2},
-        {q:"What angle is complementary to 35°?", a:["35°","55°","65°","145°"], c:1},
-        {q:"What is the surface area of a cube with side 4?", a:["64","96","128","256"], c:1},
-        {q:"How many right angles in a square?", a:["2","3","4","8"], c:2},
-        {q:"What is π/2 radians in degrees?", a:["45°","60°","90°","180°"], c:2},
-        {q:"Area of equilateral triangle side 6?", a:["9√3","18","18√3","36"], c:0},
-        {q:"What angle is supplementary to 110°?", a:["20°","70°","80°","110°"], c:1},
-        {q:"How many vertices does a cube have?", a:["6","8","10","12"], c:1},
-        {q:"What is the volume of cone radius 3 height 4?", a:["12π","16π","36π","48π"], c:0},
-        {q:"Perimeter of regular hexagon side 5?", a:["25","30","35","40"], c:1},
-        {q:"What is 2π radians in degrees?", a:["180°","270°","360°","720°"], c:2},
-        {q:"Area of rhombus diagonals 8 and 6?", a:["24","28","32","48"], c:0},
-        {q:"How many faces does a triangular prism have?", a:["3","4","5","6"], c:2},
-        {q:"What is the exterior angle of a regular hexagon?", a:["30°","45°","60°","120°"], c:2},
-        {q:"Volume of rectangular prism 4×3×2?", a:["9","24","36","48"], c:1},
-        {q:"How many diagonals in a pentagon?", a:["3","4","5","10"], c:2},
-        {q:"What is π/4 radians in degrees?", a:["30°","45°","60°","90°"], c:1},
-        {q:"Area of sector with radius 6 and angle 60°?", a:["3π","6π","9π","12π"], c:1},
-        {q:"What is an acute angle?", a:["<90°","=90°",">90°","=180°"], c:0},
-        {q:"Surface area of sphere radius 3?", a:["36π","27π","12π","9π"], c:0},
-        {q:"How many lines of symmetry in a square?", a:["2","4","6","8"], c:1},
-        {q:"What is 3π/2 radians in degrees?", a:["180°","270°","360°","540°"], c:1},
-        {q:"Area of kite diagonals 10 and 6?", a:["30","40","60","80"], c:0},
-        {q:"What is the sum of angles in a hexagon?", a:["540°","720°","900°","1080°"], c:1},
-        {q:"Volume of pyramid base 5×5 height 6?", a:["30","50","75","150"], c:1},
-        {q:"How many axes of symmetry in a circle?", a:["1","4","8","Infinite"], c:3},
-        {q:"What is π/3 radians in degrees?", a:["30°","60°","90°","120°"], c:1},
-        {q:"Circumference of circle diameter 14?", a:["14π","28π","7π","21π"], c:0},
-        {q:"What is an obtuse angle?", a:["<90°","=90°",">90°<180°","=180°"], c:2},
-        {q:"Area of regular pentagon side 4?", a:["27.5","40","55","80"], c:0},
-        {q:"How many vertices in a triangular pyramid?", a:["3","4","5","6"], c:1},
-        {q:"What is 2π/3 radians in degrees?", a:["60°","90°","120°","180°"], c:2},
-        {q:"Volume of hemisphere radius 3?", a:["18π","27π","36π","54π"], c:0},
-        {q:"What is the measure of each angle in equilateral triangle?", a:["45°","60°","90°","120°"], c:1},
-        {q:"Surface area of cylinder radius 3 height 5?", a:["30π","48π","60π","90π"], c:1},
-        {q:"How many sides does a dodecagon have?", a:["10","11","12","13"], c:2},
-        {q:"What is π/6 radians in degrees?", a:["15°","30°","45°","60°"], c:1},
-        {q:"Area of annulus outer radius 5 inner radius 3?", a:["8π","16π","25π","34π"], c:1},
-        {q:"What type of triangle has all sides equal?", a:["Scalene","Isosceles","Equilateral","Right"], c:2},
-        {q:"Volume of torus major radius 5 minor radius 2?", a:["20π²","40π²","80π²","100π²"], c:1},
-        {q:"How many edges in a tetrahedron?", a:["4","5","6","8"], c:2},
-        {q:"What is 5π/6 radians in degrees?", a:["120°","135°","150°","180°"], c:2},
-        {q:"Area of semicircle radius 4?", a:["4π","8π","16π","32π"], c:1},
-        {q:"What is the name of a 7-sided polygon?", a:["Hexagon","Heptagon","Octagon","Nonagon"], c:1},
-        {q:"Volume of oblique cylinder radius 2 height 7?", a:["14π","28π","49π","98π"], c:1},
-        {q:"How many diagonals in a hexagon?", a:["6","9","12","15"], c:1},
-        {q:"What is 3π/4 radians in degrees?", a:["120°","135°","150°","180°"], c:1},
-        {q:"Lateral surface area of cone radius 3 slant 5?", a:["15π","30π","45π","75π"], c:0},
-        {q:"What is a reflex angle?", a:["<90°","90°-180°",">180°<360°","=360°"], c:2},
-        {q:"Area of ellipse semi-axes 4 and 3?", a:["12π","24π","36π","48π"], c:0},
-        {q:"How many faces does an octahedron have?", a:["6","8","10","12"], c:1},
-        {q:"What is 5π/4 radians in degrees?", a:["180°","225°","270°","315°"], c:1},
-        {q:"Volume of square pyramid base 6×6 height 8?", a:["72","96","144","288"], c:1},
-        {q:"What type of quadrilateral has only one pair of parallel sides?", a:["Rectangle","Rhombus","Trapezoid","Kite"], c:2},
-        {q:"Surface area of cube edge 5?", a:["100","125","150","625"], c:2},
-        {q:"How many vertices in an octahedron?", a:["4","6","8","12"], c:1},
-        {q:"What is 7π/6 radians in degrees?", a:["150°","180°","210°","240°"], c:2},
-        {q:"Area of square with diagonal 10?", a:["25","50","75","100"], c:1},
-        {q:"What is the sum of exterior angles of any polygon?", a:["180°","270°","360°","540°"], c:2},
-        {q:"Volume of triangular prism base 6 height 4 length 10?", a:["120","240","360","480"], c:0},
-        {q:"How many planes of symmetry in a cube?", a:["3","6","9","12"], c:2},
-        {q:"What is 4π/3 radians in degrees?", a:["180°","210°","240°","270°"], c:2},
-        {q:"Area of regular octagon side 5?", a:["100","120.7","150","200"], c:1},
-        {q:"What is the interior angle of a regular decagon?", a:["120°","135°","144°","150°"], c:2},
-        {q:"Volume of frustum bottom radius 4 top radius 2 height 6?", a:["56π","112π","168π","224π"], c:0},
-        {q:"How many edges in a dodecahedron?", a:["12","20","30","60"], c:2},
-        {q:"What is 5π/3 radians in degrees?", a:["240°","270°","300°","330°"], c:2},
-        {q:"Area of regular hexagon side 6?", a:["54√3","108","108√3","216"], c:0},
-        {q:"What shape has equal width in all directions?", a:["Circle","Square","Sphere","Cube"], c:0},
-        {q:"Volume of ellipsoid semi-axes 3,4,5?", a:["60π","80π","100π","240π"], c:1},
-        {q:"How many faces in an icosahedron?", a:["12","16","20","24"], c:2}
-    ],
-    algebra: [
-        {q:"Solve for x: 2x + 5 = 15", a:["5","10","7.5","20"], c:0},
-        {q:"What is x² when x = 4?", a:["8","16","12","20"], c:1},
-        {q:"Simplify: 3x + 2x", a:["5x","6x","5x²","x⁵"], c:0},
-        {q:"What is 3 × (4 + 2)?", a:["14","18","20","12"], c:1},
-        {q:"Solve: x - 7 = 3", a:["10","4","-4","7"], c:0},
-        {q:"What is 2³?", a:["6","8","9","16"], c:1},
-        {q:"Simplify: 4x - x", a:["3x","4x","5x","3"], c:0},
-        {q:"What is √16?", a:["2","4","8","16"], c:1},
-        {q:"Solve: 3x = 21", a:["6","7","8","18"], c:1},
-        {q:"What is 5²?", a:["10","15","25","50"], c:2},
-        {q:"Solve: x/3 = 4", a:["1","7","12","16"], c:2},
-        {q:"What is (-3)²?", a:["-9","-6","6","9"], c:3},
-        {q:"Simplify: 2(x + 3)", a:["2x + 3","2x + 6","x + 6","2x + 5"], c:1},
-        {q:"Solve: 2x - 3 = 11", a:["4","7","8","14"], c:1},
-        {q:"What is √25?", a:["3","4","5","6"], c:2},
-        {q:"Evaluate: 3² + 4²", a:["25","49","12","14"], c:0},
-        {q:"Solve: 5x + 2 = 3x + 10", a:["2","4","6","8"], c:1},
-        {q:"What is 2⁴?", a:["8","12","16","32"], c:2},
-        {q:"Simplify: (x + 2)(x + 3)", a:["x² + 5x + 6","x² + 6","2x + 5","x² + 5"], c:0},
-        {q:"Solve: x² = 36", a:["4","6","8","18"], c:1},
-        {q:"What is |−8|?", a:["-8","0","4","8"], c:3},
-        {q:"Evaluate: 5 - 3 × 2", a:["-1","4","16","10"], c:0},
-        {q:"Solve: 4(x - 2) = 12", a:["3","4","5","6"], c:2},
-        {q:"What is √81?", a:["7","8","9","10"], c:2},
-        {q:"Simplify: x² × x³", a:["x⁵","x⁶","2x⁵","x⁹"], c:0},
-        {q:"Solve: 2x + 3x = 20", a:["2","4","5","10"], c:1},
-        {q:"What is 10²?", a:["20","50","100","1000"], c:2},
-        {q:"Factor: x² - 9", a:["(x-3)²","(x+3)(x-3)","(x-9)(x+1)","x(x-9)"], c:1},
-        {q:"Solve: x/2 + 3 = 7", a:["4","6","8","10"], c:2},
-        {q:"What is ³√27?", a:["3","6","9","27"], c:0},
-        {q:"Evaluate: (2 + 3)²", a:["10","13","25","36"], c:2},
-        {q:"Solve: 7 - 2x = 1", a:["2","3","4","6"], c:1},
-        {q:"What is x⁰ (x≠0)?", a:["0","1","x","undefined"], c:1},
-        {q:"Simplify: (x²)³", a:["x⁵","x⁶","x⁸","3x²"], c:1},
-        {q:"Solve for y: 2y - 5 = y + 3", a:["2","5","8","10"], c:2},
-        {q:"What is √100?", a:["5","10","20","50"], c:1},
-        {q:"Expand: (x + 5)²", a:["x² + 25","x² + 10x + 25","x² + 5x + 25","2x + 10"], c:1},
-        {q:"Solve: 3x - 4 = 2x + 6", a:["2","5","10","12"], c:2},
-        {q:"What is 2⁵?", a:["10","16","25","32"], c:3},
-        {q:"Factor: x² + 5x + 6", a:["(x+2)(x+3)","(x+1)(x+6)","(x+5)(x+1)","x(x+5)+6"], c:0},
-        {q:"Solve: x² - 4 = 0", a:["±1","±2","±4","0"], c:1},
-        {q:"What is |−15|?", a:["-15","0","5","15"], c:3},
-        {q:"Simplify: 2x + 3y - x + 2y", a:["x + 5y","3x + y","x + y","3xy"], c:0},
-        {q:"Solve: 5(x + 1) = 25", a:["3","4","5","6"], c:1},
-        {q:"What is √144?", a:["10","11","12","14"], c:2},
-        {q:"Evaluate: 4³", a:["12","16","48","64"], c:3},
-        {q:"Solve: 3x + 2 = 2x + 9", a:["5","7","11","13"], c:1},
-        {q:"Factor: x² - x - 6", a:["(x-2)(x+3)","(x-3)(x+2)","(x-1)(x+6)","(x+1)(x-6)"], c:1},
-        {q:"What is 3⁴?", a:["12","27","64","81"], c:3},
-        {q:"Solve: x/4 = 5", a:["1.25","9","20","25"], c:2},
-        {q:"Simplify: (2x)³", a:["2x³","6x³","8x³","x⁶"], c:2},
-        {q:"What is √49?", a:["5","6","7","8"], c:2},
-        {q:"Solve: 6x - 8 = 4x + 2", a:["2","3","5","10"], c:2},
-        {q:"Evaluate: 2² + 3²", a:["5","10","13","25"], c:2},
-        {q:"Factor: x² - 16", a:["(x-4)²","(x+4)(x-4)","(x-2)(x+8)","x(x-16)"], c:1},
-        {q:"Solve: 2(x - 3) = 10", a:["5","6","7","8"], c:3},
-        {q:"What is ³√8?", a:["2","3","4","8"], c:0},
-        {q:"Simplify: x⁴/x²", a:["x","x²","x³","2x²"], c:1},
-        {q:"Solve: 4x + 3 = 3x + 9", a:["3","6","9","12"], c:1},
-        {q:"What is 6²?", a:["12","24","36","72"], c:2},
-        {q:"Expand: (x - 3)²", a:["x² - 9","x² - 6x + 9","x² + 6x + 9","x² - 3x + 9"], c:1},
-        {q:"Solve: x² = 64", a:["4","±6","±8","16"], c:2},
-        {q:"What is |−20|?", a:["-20","-10","10","20"], c:3},
-        {q:"Simplify: 5(2x + 1)", a:["10x + 1","10x + 5","7x + 5","5x + 5"], c:1},
-        {q:"Solve: 8 - 3x = 2", a:["2","3","6","10"], c:0},
-        {q:"What is √64?", a:["6","7","8","9"], c:2},
-        {q:"Factor: x² + 7x + 12", a:["(x+3)(x+4)","(x+2)(x+6)","(x+1)(x+12)","(x+7)(x+5)"], c:0},
-        {q:"Solve: x/5 + 2 = 5", a:["3","10","15","25"], c:2},
-        {q:"What is 4⁴?", a:["16","64","128","256"], c:3},
-        {q:"Simplify: 3x² + 2x² - x²", a:["2x²","4x²","5x²","6x²"], c:1},
-        {q:"Solve: 5x = 2x + 18", a:["3","6","9","18"], c:1},
-        {q:"What is √121?", a:["10","11","12","13"], c:1},
-        {q:"Evaluate: 5² - 3²", a:["8","16","25","34"], c:1},
-        {q:"Solve: 3(x + 2) = 18", a:["2","4","6","8"], c:1},
-        {q:"Factor: 2x² + 8x", a:["2(x² + 4x)","2x(x + 4)","x(2x + 8)","(2x)(x + 4)"], c:1},
-        {q:"What is 7²?", a:["14","35","49","77"], c:2},
-        {q:"Solve: 2x + 7 = x + 15", a:["7","8","15","22"], c:1},
-        {q:"Simplify: (3x)²", a:["3x²","6x²","9x²","x⁶"], c:2},
-        {q:"What is ³√64?", a:["2","4","8","16"], c:1},
-        {q:"Solve: x² - 25 = 0", a:["±3","±5","±10","±25"], c:1},
-        {q:"Evaluate: (4 - 1)³", a:["9","12","27","64"], c:2},
-        {q:"Factor: x² - 2x - 15", a:["(x-3)(x+5)","(x-5)(x+3)","(x-15)(x+1)","(x+15)(x-1)"], c:1},
-        {q:"Solve: 7x - 5 = 4x + 10", a:["3","5","7","15"], c:1},
-        {q:"What is √169?", a:["11","12","13","14"], c:2},
-        {q:"Simplify: x⁶/x³", a:["x²","x³","x⁹","2x³"], c:1},
-        {q:"Solve: 4(2x - 1) = 20", a:["2","3","4","6"], c:1},
-        {q:"What is 8²?", a:["16","48","64","128"], c:2},
-        {q:"Expand: (2x + 1)(x + 3)", a:["2x² + 7x + 3","2x² + 5x + 3","2x² + 6x + 3","3x² + 7x + 3"], c:0},
-        {q:"Solve: 9x = 4x + 25", a:["3","5","9","25"], c:1},
-        {q:"What is |−30|?", a:["-30","-15","15","30"], c:3},
-        {q:"Factor: x² + 9x + 20", a:["(x+4)(x+5)","(x+2)(x+10)","(x+1)(x+20)","(x+9)(x+11)"], c:0},
-        {q:"Solve: x/3 - 2 = 4", a:["6","12","18","24"], c:2},
-        {q:"What is 9²?", a:["18","27","81","162"], c:2},
-        {q:"Simplify: (x³)²", a:["x⁵","x⁶","x⁹","2x³"], c:1},
-        {q:"Solve: 10 - 4x = 2x + 4", a:["1","2","3","4"], c:0},
-        {q:"What is √196?", a:["12","13","14","16"], c:2}
-    ],
-    calculus: [
-        {q:"What is the derivative of x²?", a:["x","2x","x²","2"], c:1},
-        {q:"What is ∫x dx?", a:["x","x²","x²/2 + C","2
-
+/* -------------------------
+   THREE / VR INITIALIZATION
+   ------------------------- */
 function initScene(){
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb,50,200);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87ceeb);
+  scene.fog = new THREE.Fog(0x87ceeb, 50, 200);
 
-    camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-    camera.position.set(0,10,30);
-    camera.lookAt(0,5,0);
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 10, 30);
+  camera.lookAt(0,5,0);
 
-    renderer = new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth,window.innerHeight);
-    renderer.xr.enabled = true;
-    document.body.appendChild(renderer.domElement);
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  document.body.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff,0.7);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff,0.9);
-    directionalLight.position.set(50,50,50);
-    scene.add(directionalLight);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+  scene.add(ambientLight);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+  directionalLight.position.set(50,50,50);
+  scene.add(directionalLight);
 
-    create360Environment();
-    createEnvironmentObjects();
-    createVRUI();
-    setupVRControllers();
-    setupVRButton();
-    animate();
+  create360Environment();
+  createEnvironmentObjects();
+  createVRUI();
+  setupVRControllers();
+  setupVRButton();
+  animate();
 }
 
 function create360Environment(){
-    const geometry = new THREE.SphereGeometry(500,60,40);
-    geometry.scale(-1,1,1);
-    const canvas = document.createElement('canvas');
-    canvas.width=1024; canvas.height=512;
-    const ctx = canvas.getContext('2d');
-    const gradient = ctx.createLinearGradient(0,0,0,canvas.height);
-    gradient.addColorStop(0,'#1a2980'); gradient.addColorStop(1,'#26d0ce');
-    ctx.fillStyle = gradient; ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    for(let i=0;i<10;i++){ 
-        ctx.beginPath(); 
-        ctx.arc(Math.random()*canvas.width,Math.random()*canvas.height/2,30+Math.random()*50,0,Math.PI*2); 
-        ctx.fill(); 
-    }
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.MeshBasicMaterial({map:texture});
-    scene.add(new THREE.Mesh(geometry,material));
+  const geometry = new THREE.SphereGeometry(500,60,40);
+  geometry.scale(-1,1,1);
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048; canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createLinearGradient(0,0,0,canvas.height);
+  gradient.addColorStop(0,'#1a2980'); gradient.addColorStop(1,'#26d0ce');
+  ctx.fillStyle = gradient; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for(let i=0;i<15;i++){
+    ctx.beginPath();
+    ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height/2, 20+Math.random()*60, 0, Math.PI*2);
+    ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.MeshBasicMaterial({map: texture});
+  scene.add(new THREE.Mesh(geometry, material));
 }
 
 function createEnvironmentObjects(){
-    const pool = new THREE.Mesh(
-        new THREE.CylinderGeometry(25,25,1,32), 
-        new THREE.MeshPhongMaterial({color:0x1e90ff,transparent:true,opacity:0.7,shininess:100})
+  const pool = new THREE.Mesh(
+    new THREE.CylinderGeometry(25,25,1,32),
+    new THREE.MeshPhongMaterial({color:0x1e90ff,transparent:true,opacity:0.7,shininess:100})
+  );
+  pool.position.y = 0;
+  scene.add(pool);
+
+  for(let i=0;i<3;i++){
+    const cliff = new THREE.Mesh(
+      new THREE.BoxGeometry(15,40,15),
+      new THREE.MeshPhongMaterial({color:0x808080})
     );
-    pool.position.y=0; 
-    scene.add(pool);
+    cliff.position.set(Math.cos(i*Math.PI*2/3)*30,20,Math.sin(i*Math.PI*2/3)*30);
+    scene.add(cliff);
+  }
 
-    for(let i=0;i<3;i++){
-        const cliff = new THREE.Mesh(
-            new THREE.BoxGeometry(15,40,15), 
-            new THREE.MeshPhongMaterial({color:0x808080})
-        );
-        cliff.position.set(Math.cos(i*Math.PI*2/3)*30,20,Math.sin(i*Math.PI*2/3)*30);
-        scene.add(cliff);
-    }
+  const particles = new THREE.BufferGeometry();
+  const pos = new Float32Array(1000*3);
+  for(let i=0;i<pos.length;i+=3){
+    pos[i] = (Math.random()-0.5)*60;
+    pos[i+1] = Math.random()*50+10;
+    pos[i+2] = (Math.random()-0.5)*60;
+  }
+  particles.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const particleMat = new THREE.PointsMaterial({color:0xffffff, size:0.3, transparent:true, opacity:0.85});
+  scene.add(new THREE.Points(particles, particleMat));
 
-    const particles = new THREE.BufferGeometry();
-    const pos = new Float32Array(1000*3);
-    for(let i=0;i<pos.length;i+=3){ 
-        pos[i]=(Math.random()-0.5)*60; 
-        pos[i+1]=Math.random()*50+10; 
-        pos[i+2]=(Math.random()-0.5)*60; 
-    }
-    particles.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    const particleMat = new THREE.PointsMaterial({color:0xffffff,size:0.3,transparent:true,opacity:0.8});
-    scene.add(new THREE.Points(particles,particleMat));
-
-    for(let i=0;i<15;i++){
-        const trunk = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.5,0.7,8,8),
-            new THREE.MeshPhongMaterial({color:0x8b4513})
-        );
-        const leaves = new THREE.Mesh(
-            new THREE.SphereGeometry(3,8,8),
-            new THREE.MeshPhongMaterial({color:0x228b22})
-        );
-        leaves.position.y=6; 
-        trunk.add(leaves);
-        const angle=(i/15)*Math.PI*2, radius=35+Math.random()*10;
-        trunk.position.set(Math.cos(angle)*radius,4,Math.sin(angle)*radius);
-        scene.add(trunk);
-    }
+  for(let i=0;i<15;i++){
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5,0.7,8,8),
+      new THREE.MeshPhongMaterial({color:0x8b4513})
+    );
+    const leaves = new THREE.Mesh(
+      new THREE.SphereGeometry(3,8,8),
+      new THREE.MeshPhongMaterial({color:0x228b22})
+    );
+    leaves.position.y = 6;
+    trunk.add(leaves);
+    const angle=(i/15)*Math.PI*2, radius=35+Math.random()*10;
+    trunk.position.set(Math.cos(angle)*radius,4,Math.sin(angle)*radius);
+    scene.add(trunk);
+  }
 }
 
-function createVRUI(){
-    vrUIGroup = new THREE.Group();
-    vrUIGroup.position.set(0, 1.5, -4.5);
-    scene.add(vrUIGroup);
-    
-    updateVRUI();
-}
+/* -------------------------
+   VR UI HELPERS (crisp canvas text)
+   - uses devicePixelRatio scaling to make text sharp
+   - uses same font-family as the 2D UI (Arial)
+   ------------------------- */
+function createTextCanvas(text, width, height, bgColor, textColor, baseFontSize = 70){
+  // width/height are logical pixels; scale by device pixel ratio for crispness
+  const ratio = Math.max(1, window.devicePixelRatio || 1);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(width * ratio);
+  canvas.height = Math.floor(height * ratio);
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  const ctx = canvas.getContext('2d', { alpha: true });
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0); // scale drawing to device pixel ratio
+  ctx.imageSmoothingEnabled = true;
+  // Background gradient
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  if(bgColor === '#0066cc'){
+    gradient.addColorStop(0, '#0066cc');
+    gradient.addColorStop(1, '#00ccff');
+  } else if(bgColor === '#1a5080'){
+    gradient.addColorStop(0, '#1a5080');
+    gradient.addColorStop(1, '#2a7090');
+  } else if(bgColor === '#00ccff'){
+    gradient.addColorStop(0, '#00aaff');
+    gradient.addColorStop(1, '#00ffff');
+  } else if(bgColor === '#001a40'){
+    gradient.addColorStop(0, '#001a40');
+    gradient.addColorStop(1, '#002850');
+  } else {
+    gradient.addColorStop(0, bgColor); gradient.addColorStop(1, bgColor);
+  }
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0,0,width,height);
 
-function setupVRControllers(){
-    // Setup controller 1 (right hand)
-    controller1 = renderer.xr.getController(0);
-    controller1.addEventListener('selectstart', onSelectStart);
-    controller1.addEventListener('selectend', onSelectEnd);
-    scene.add(controller1);
-    
-    // Setup controller 2 (left hand)
-    controller2 = renderer.xr.getController(1);
-    controller2.addEventListener('selectstart', onSelectStart);
-    controller2.addEventListener('selectend', onSelectEnd);
-    scene.add(controller2);
-    
-    // Add controller ray visualizations
-    const geometry = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 0, -5)
-    ]);
-    
-    const line1 = new THREE.Line(geometry, new THREE.LineBasicMaterial({color: 0x00ffff}));
-    controller1.add(line1);
-    
-    const line2 = new THREE.Line(geometry.clone(), new THREE.LineBasicMaterial({color: 0x00ffff}));
-    controller2.add(line2);
-}
+  // Border
+  ctx.strokeStyle = 'rgba(0,200,255,0.18)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2,2,width-4,height-4);
 
-let selectedButton = null;
+  // Text settings
+  ctx.fillStyle = textColor;
+  const fontSize = Math.floor(baseFontSize * (height / 256)); // scale base font to canvas height
+  ctx.font = `bold ${fontSize}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
 
-function onSelectStart(){
-    if(selectedButton && selectedButton.userData.action){
-        // Visual feedback
-        const canvas = createTextCanvas(
-            selectedButton.userData.text, 
-            1024, 
-            256, 
-            '#00ff00', 
-            '#ffffff', 
-            70
-        );
-        selectedButton.material.map = new THREE.CanvasTexture(canvas);
-        selectedButton.material.needsUpdate = true;
-    }
-}
-
-function onSelectEnd(){
-    if(selectedButton && selectedButton.userData.action){
-        selectedButton.userData.action();
-        selectedButton = null;
-    }
-}
-
-function createTextCanvas(text, width, height, bgColor, textColor, fontSize = 70, isPill = false){
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    
-    // Clear canvas with transparency
-    ctx.clearRect(0, 0, width, height);
-    
-    // Create gradient background
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    if(bgColor === '#0066cc'){
-        gradient.addColorStop(0, '#0066cc');
-        gradient.addColorStop(1, '#00ccff');
-    } else if(bgColor === '#1a5080'){
-        gradient.addColorStop(0, '#1a5080');
-        gradient.addColorStop(1, '#2a7090');
-    } else if(bgColor === '#00ccff'){
-        gradient.addColorStop(0, '#00aaff');
-        gradient.addColorStop(1, '#00ffff');
-    } else if(bgColor === '#ff0000'){
-        gradient.addColorStop(0, '#aa0000');
-        gradient.addColorStop(1, '#ff0000');
+  // Word wrap
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+  const maxWidth = width - 80;
+  words.forEach(word => {
+    const testLine = currentLine + word + ' ';
+    const metrics = ctx.measureText(testLine);
+    if(metrics.width > maxWidth && currentLine !== ''){
+      lines.push(currentLine.trim());
+      currentLine = word + ' ';
     } else {
-        ctx.fillStyle = bgColor;
-        gradient.addColorStop(0, bgColor);
-        gradient.addColorStop(1, bgColor);
+      currentLine = testLine;
     }
-    
-    ctx.fillStyle = gradient;
-    
-    // Draw pill-shaped or regular rectangle
-    if(isPill){
-        const radius = height / 2;
-        ctx.beginPath();
-        ctx.moveTo(radius, 0);
-        ctx.lineTo(width - radius, 0);
-        ctx.arc(width - radius, radius, radius, -Math.PI/2, Math.PI/2);
-        ctx.lineTo(radius, height);
-        ctx.arc(radius, radius, radius, Math.PI/2, -Math.PI/2);
-        ctx.closePath();
-        ctx.fill();
-    } else {
-        const radius = 20;
-        ctx.beginPath();
-        ctx.moveTo(radius, 0);
-        ctx.lineTo(width - radius, 0);
-        ctx.quadraticCurveTo(width, 0, width, radius);
-        ctx.lineTo(width, height - radius);
-        ctx.quadraticCurveTo(width, height, width - radius, height);
-        ctx.lineTo(radius, height);
-        ctx.quadraticCurveTo(0, height, 0, height - radius);
-        ctx.lineTo(0, radius);
-        ctx.quadraticCurveTo(0, 0, radius, 0);
-        ctx.closePath();
-        ctx.fill();
-    }
-    
-    // Add border with rounded corners
-    ctx.strokeStyle = 'rgba(0, 200, 255, 0.6)';
-    ctx.lineWidth = 6;
-    if(isPill){
-        const radius = height / 2;
-        ctx.beginPath();
-        ctx.moveTo(radius, 3);
-        ctx.lineTo(width - radius, 3);
-        ctx.arc(width - radius, radius, radius - 3, -Math.PI/2, Math.PI/2);
-        ctx.lineTo(radius, height - 3);
-        ctx.arc(radius, radius, radius - 3, Math.PI/2, -Math.PI/2);
-        ctx.closePath();
-        ctx.stroke();
-    } else {
-        const radius = 20;
-        ctx.beginPath();
-        ctx.moveTo(radius, 3);
-        ctx.lineTo(width - radius, 3);
-        ctx.quadraticCurveTo(width - 3, 3, width - 3, radius);
-        ctx.lineTo(width - 3, height - radius);
-        ctx.quadraticCurveTo(width - 3, height - 3, width - radius, height - 3);
-        ctx.lineTo(radius, height - 3);
-        ctx.quadraticCurveTo(3, height - 3, 3, height - radius);
-        ctx.lineTo(3, radius);
-        ctx.quadraticCurveTo(3, 3, radius, 3);
-        ctx.closePath();
-        ctx.stroke();
-    }
-    
-    // Set text properties for crisp rendering
-    ctx.fillStyle = textColor;
-    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    
-    // Word wrap with better spacing
-    const words = text.split(' ');
-    const lines = [];
-    let currentLine = '';
-    const maxWidth = width - 100;
-    
-    words.forEach(word => {
-        const testLine = currentLine + word + ' ';
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && currentLine !== '') {
-            lines.push(currentLine.trim());
-            currentLine = word + ' ';
-        } else {
-            currentLine = testLine;
-        }
-    });
-    lines.push(currentLine.trim());
-    
-    const lineHeight = fontSize * 1.2;
-    const startY = height / 2 - ((lines.length - 1) * lineHeight) / 2;
-    
-    lines.forEach((line, i) => {
-        ctx.fillText(line, width / 2, startY + i * lineHeight);
-    });
-    
-    return canvas;
+  });
+  lines.push(currentLine.trim());
+  const lineHeight = fontSize * 1.15;
+  const startY = (height - (lines.length * lineHeight)) / 2 + fontSize/2;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, width/2, startY + i * lineHeight);
+  });
+
+  return canvas;
 }
 
-function createVRButton(text, x, y, action, color = '#0066cc'){
-    const canvas = createTextCanvas(text, 1024, 256, color, '#ffffff', 70);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    
-    const geometry = new THREE.PlaneGeometry(2.5, 0.6);
-    const material = new THREE.MeshBasicMaterial({
-        map: texture, 
-        transparent: true,
-        side: THREE.DoubleSide
-    });
-    const button = new THREE.Mesh(geometry, material);
-    button.position.set(x, y, 0);
-    button.userData = {action: action, defaultColor: color, text: text};
-    vrUIGroup.add(button);
-    vrButtons.push(button);
-    return button;
+/* create a VR button (plane with canvas texture). Keep plane aspect ratio ~ canvas width/height */
+function createVRButton(text, x, y, action, color = '#0066cc', planeW = 2.8, planeH = 0.7){
+  // match canvas ratio to plane
+  const canvasW = 2048, canvasH = Math.round(canvasW * (planeH / planeW));
+  const canvas = createTextCanvas(text, canvasW / 4, canvasH / 4, color, '#ffffff', 90); // smaller logical sizes but high-dpr inside
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+
+  const geometry = new THREE.PlaneGeometry(planeW, planeH);
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
+  const button = new THREE.Mesh(geometry, material);
+  button.position.set(x, y, 0);
+  button.userData = { action: action, defaultColor: color, text: text, canvasW: canvasW/4, canvasH: canvasH/4, planeW, planeH };
+  vrUIGroup.add(button);
+  vrButtons.push(button);
+  return button;
 }
 
 function createVRPanel(text, x, y, width, height, bgColor = '#001428', textColor = '#00ffff', fontSize = 80){
-    const canvas = createTextCanvas(text, 1024, 512, bgColor, textColor, fontSize);
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    
-    const geometry = new THREE.PlaneGeometry(width, height);
-    const material = new THREE.MeshBasicMaterial({
-        map: texture, 
-        transparent: true, 
-        opacity: 0.98,
-        side: THREE.DoubleSide
-    });
-    const panel = new THREE.Mesh(geometry, material);
-    panel.position.set(x, y, 0);
-    vrUIGroup.add(panel);
-    return panel;
+  const canvasW = 2048, canvasH = Math.round(canvasW * (height / width));
+  const canvas = createTextCanvas(text, canvasW / 4, canvasH / 4, bgColor, textColor, fontSize);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.needsUpdate = true;
+
+  const geometry = new THREE.PlaneGeometry(width, height);
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.98, side: THREE.DoubleSide });
+  const panel = new THREE.Mesh(geometry, material);
+  panel.position.set(x, y, 0);
+  vrUIGroup.add(panel);
+  return panel;
+}
+
+/* -------------------------
+   VR UI layout
+   ------------------------- */
+function createVRUI(){
+  vrUIGroup = new THREE.Group();
+  vrUIGroup.position.set(0, 1.6, -4.5);
+  scene.add(vrUIGroup);
+  updateVRUI();
 }
 
 function clearVRUI(){
-    while(vrUIGroup.children.length > 0){
-        vrUIGroup.remove(vrUIGroup.children[0]);
-    }
-    vrButtons = [];
-    selectedButton = null;
+  while(vrUIGroup.children.length > 0){
+    vrUIGroup.remove(vrUIGroup.children[0]);
+  }
+  vrButtons = [];
+  selectedButton = null;
 }
 
 function updateVRUI(){
-    clearVRUI();
-    
-    if(currentVRScreen === 'start'){
-        createVRPanel('VR MATH TRIVIA', 0, 1.8, 4, 0.8, '#001428', '#00ffff', 90);
-        createVRPanel('Test your math knowledge!', 0, 1.1, 4, 0.5, '#001428', '#aaddff', 60);
-        createVRButton('START GAME', 0, 0.3, () => { currentVRScreen = 'category'; updateVRUI(); });
-    }
-    else if(currentVRScreen === 'category'){
-        createVRPanel('CHOOSE YOUR CATEGORY', 0, 1.8, 4, 0.8, '#001428', '#00ddff', 80);
-        createVRButton('GEOMETRY', 0, 0.8, () => startVRGame('geometry'));
-        createVRButton('ALGEBRA', 0, 0.0, () => startVRGame('algebra'));
-        createVRButton('CALCULUS', 0, -0.8, () => startVRGame('calculus'));
-    }
-    else if(currentVRScreen === 'game'){
-        const q = questions[currentCategory][currentQuestion % questions[currentCategory].length];
-        createVRPanel(`Score: ${score}  |  Question ${currentQuestion + 1}/10`, 0, 2.2, 4.5, 0.5, '#001428', '#ffff00', 70);
-        createVRPanel(q.q, 0, 1.5, 4.5, 0.8, '#001a40', '#ffffff', 65);
-        
-        q.a.forEach((answer, i) => {
-            const y = 0.6 - i * 0.45;
-            createVRButton(answer, 0, y, () => checkVRAnswer(i, q.c), '#1a5080');
-        });
-    }
-    else if(currentVRScreen === 'results'){
-        createVRPanel('ROUND COMPLETE!', 0, 1.8, 4, 0.8, '#001428', '#00ff00', 90);
-        createVRPanel(`Final Score: ${score}/100`, 0, 1.1, 4, 0.6, '#001a40', '#ffff00', 80);
-        createVRButton('PLAY AGAIN', 0, 0.2, () => { currentVRScreen = 'category'; updateVRUI(); });
-        createVRButton('MAIN MENU', 0, -0.5, () => { currentVRScreen = 'start'; updateVRUI(); });
-    }
+  clearVRUI();
+  if(currentVRScreen === 'start'){
+    createVRPanel('VR MATH TRIVIA', 0, 1.8, 4.5, 0.9, '#001428', '#00ffff', 96);
+    createVRPanel('Test your math knowledge!', 0, 1.1, 4.5, 0.6, '#001428', '#aaddff', 64);
+    createVRButton('START GAME', 0, 0.3, () => { currentVRScreen = 'category'; updateVRUI(); }, '#0066cc', 2.8, 0.7);
+  } else if(currentVRScreen === 'category'){
+    createVRPanel('CHOOSE YOUR CATEGORY', 0, 1.8, 4.5, 0.9, '#001428', '#00ddff', 84);
+    createVRButton('GEOMETRY', 0, 0.9, () => startVRGame('geometry'), '#1a5080', 2.6, 0.6);
+    createVRButton('ALGEBRA', 0, 0.0, () => startVRGame('algebra'), '#1a5080', 2.6, 0.6);
+    createVRButton('CALCULUS', 0, -0.9, () => startVRGame('calculus'), '#1a5080', 2.6, 0.6);
+  } else if(currentVRScreen === 'game'){
+    const qObj = shuffledQuestions[currentQuestion];
+    createVRPanel(`Score: ${score}  |  Question ${currentQuestion + 1}/${QUESTIONS_PER_ROUND}`, 0, 2.2, 5.0, 0.6, '#001428', '#ffff00', 64);
+    createVRPanel(qObj.q, 0, 1.55, 4.8, 0.9, '#001a40', '#ffffff', 62);
+    qObj.a.forEach((answer, i) => {
+      const y = 0.5 - i * 0.55;
+      createVRButton(answer, 0, y, () => checkVRAnswer(i, qObj.c), '#1a5080', 4.2, 0.6);
+    });
+    // feedback area
+    createVRPanel('', 0, -1.6, 3.6, 0.4, '#001428', '#ffcc66', 48);
+  } else if(currentVRScreen === 'results'){
+    createVRPanel('ROUND COMPLETE!', 0, 1.8, 4.5, 0.9, '#001428', '#00ff00', 90);
+    createVRPanel(`Final Score: ${score}/${QUESTIONS_PER_ROUND * 10}`, 0, 1.1, 4.5, 0.6, '#001a40', '#ffff00', 72);
+    createVRButton('PLAY AGAIN', 0, 0.2, () => { currentVRScreen = 'category'; updateVRUI(); }, '#0066cc', 2.6, 0.6);
+    createVRButton('MAIN MENU', 0, -0.6, () => { currentVRScreen = 'start'; updateVRUI(); }, '#0066cc', 2.6, 0.6);
+  }
 }
 
-function startVRGame(category){
-    currentCategory = category;
-    score = 0;
-    currentQuestion = 0;
-    attempted = false;
-    currentVRScreen = 'game';
-    updateVRUI();
+/* -------------------------
+   VR Controllers
+   ------------------------- */
+function setupVRControllers(){
+  controller1 = renderer.xr.getController(0);
+  controller1.addEventListener('selectstart', onSelectStart);
+  controller1.addEventListener('selectend', onSelectEnd);
+  scene.add(controller1);
+  controller2 = renderer.xr.getController(1);
+  controller2.addEventListener('selectstart', onSelectStart);
+  controller2.addEventListener('selectend', onSelectEnd);
+  scene.add(controller2);
+
+  const points = [ new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,-5) ];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line1 = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x00ffff }));
+  controller1.add(line1);
+  const line2 = new THREE.Line(geometry.clone(), new THREE.LineBasicMaterial({ color: 0x00ffff }));
+  controller2.add(line2);
 }
 
-function checkVRAnswer(selectedIndex, correctIndex){
-    if(selectedIndex === correctIndex){
-        if(!attempted){
-            score += 10;
-        }
-        setTimeout(() => {
-            currentQuestion++;
-            attempted = false;
-            if(currentQuestion >= 10){
-                currentVRScreen = 'results';
-            }
-            updateVRUI();
-        }, 1000);
-    } else {
-        attempted = true;
-    }
+function onSelectStart(){
+  if(selectedButton && selectedButton.userData && selectedButton.userData.action){
+    // visual press feedback: tint to lighter color
+    const canvas = createTextCanvas(selectedButton.userData.text, selectedButton.userData.canvasW, selectedButton.userData.canvasH, '#00ccff', '#ffffff', 70);
+    selectedButton.material.map = new THREE.CanvasTexture(canvas);
+    selectedButton.material.map.minFilter = THREE.LinearFilter;
+    selectedButton.material.map.magFilter = THREE.LinearFilter;
+    selectedButton.material.needsUpdate = true;
+  }
 }
 
-function setupVRButton(){
-    const vrButton = document.getElementById('vrButton');
-    
-    if('xr' in navigator){
-        navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-            if(!supported){
-                vrButton.textContent = 'VR Not Supported';
-                vrButton.disabled = true;
-            }
-        });
-    } else {
-        vrButton.textContent = 'VR Not Available';
-        vrButton.disabled = true;
-    }
+function onSelectEnd(){
+  if(selectedButton && selectedButton.userData && selectedButton.userData.action){
+    selectedButton.userData.action();
+    selectedButton = null;
+  }
 }
 
-function toggleVR(){
-    const vrButton = document.getElementById('vrButton');
-    
-    if(!isVRMode){
-        vrButton.textContent = 'Exit VR Mode';
-        vrButton.classList.add('vr-active');
-        
-        if('xr' in navigator){
-            navigator.xr.requestSession('immersive-vr', {
-                optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
-            }).then((session) => {
-                renderer.xr.setSession(session);
-                isVRMode = true;
-                document.getElementById('ui').style.display = 'none';
-                
-                session.addEventListener('end', () => {
-                    isVRMode = false;
-                    vrButton.textContent = 'Enter VR Mode';
-                    vrButton.classList.remove('vr-active');
-                    document.getElementById('ui').style.display = 'block';
-                });
-            }).catch((err) => {
-                console.error('VR Error:', err);
-                vrButton.textContent = 'Enter VR Mode';
-                vrButton.classList.remove('vr-active');
-                alert('Failed to enter VR mode');
-            });
-        }
-    } else {
-        const session = renderer.xr.getSession();
-        if(session) session.end();
-    }
-}
-
+/* Checks VR controller rays for hover & updates selectedButton */
 function checkVRInteraction(){
-    if(!isVRMode || vrButtons.length === 0) return;
-    
-    const raycaster = new THREE.Raycaster();
-    const tempMatrix = new THREE.Matrix4();
-    
-    // Check both controllers
-    [controller1, controller2].forEach(controller => {
-        tempMatrix.identity().extractRotation(controller.matrixWorld);
-        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-        
-        const intersects = raycaster.intersectObjects(vrButtons);
-        
-        if(intersects.length > 0){
-            const btn = intersects[0].object;
-            selectedButton = btn;
-            
-            // Highlight button
-            const canvas = createTextCanvas(btn.userData.text, 1024, 256, '#00ccff', '#ffffff', 70);
-            btn.material.map = new THREE.CanvasTexture(canvas);
-            btn.material.needsUpdate = true;
-        }
-    });
-    
-    // Reset non-selected buttons
-    vrButtons.forEach(btn => {
-        if(btn !== selectedButton){
-            const canvas = createTextCanvas(btn.userData.text, 1024, 256, btn.userData.defaultColor, '#ffffff', 70);
-            btn.material.map = new THREE.CanvasTexture(canvas);
-            btn.material.needsUpdate = true;
-        }
-    });
+  if(!isVRMode || vrButtons.length === 0) return;
+  const raycaster = new THREE.Raycaster();
+  const tempMatrix = new THREE.Matrix4();
+  [controller1, controller2].forEach(controller => {
+    if(!controller) return;
+    tempMatrix.identity().extractRotation(controller.matrixWorld);
+    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+    const intersects = raycaster.intersectObjects(vrButtons);
+    if(intersects.length > 0){
+      const btn = intersects[0].object;
+      selectedButton = btn;
+      // Highlight button with a cyan tint
+      const canvas = createTextCanvas(btn.userData.text, btn.userData.canvasW, btn.userData.canvasH, '#00ccff', '#ffffff', 70);
+      btn.material.map = new THREE.CanvasTexture(canvas);
+      btn.material.map.minFilter = THREE.LinearFilter;
+      btn.material.map.magFilter = THREE.LinearFilter;
+      btn.material.needsUpdate = true;
+    }
+  });
+  // Reset non-selected buttons
+  vrButtons.forEach(btn => {
+    if(btn !== selectedButton){
+      const canvas = createTextCanvas(btn.userData.text, btn.userData.canvasW, btn.userData.canvasH, btn.userData.defaultColor, '#ffffff', 70);
+      btn.material.map = new THREE.CanvasTexture(canvas);
+      btn.material.map.minFilter = THREE.LinearFilter;
+      btn.material.map.magFilter = THREE.LinearFilter;
+      btn.material.needsUpdate = true;
+    }
+  });
 }
 
-function animate(){
-    renderer.setAnimationLoop(() => {
-        if(!isVRMode){
-            camera.position.x = Math.sin(Date.now() * 0.0001) * 5;
-            camera.lookAt(0, 5, 0);
-        } else {
-            checkVRInteraction();
-        }
-        
-        const particles = scene.children.find(c => c instanceof THREE.Points);
-        if(particles){
-            const positions = particles.geometry.attributes.position.array;
-            for(let i=1; i<positions.length; i+=3){ 
-                positions[i] -= 0.3; 
-                if(positions[i] < 0) positions[i] = 60; 
-            }
-            particles.geometry.attributes.position.needsUpdate = true;
-        }
-        
-        renderer.render(scene, camera);
-    });
+/* -------------------------
+   GAME LOGIC (non-VR)
+   - shuffle questions at start
+   - sequentially walk through shuffledQuestions
+   ------------------------- */
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function prepareRound(cat){
+  // make a copy and shuffle; take first QUESTIONS_PER_ROUND
+  const pool = questions[cat].slice();
+  const shuffled = shuffleArray(pool);
+  shuffledQuestions = shuffled.slice(0, QUESTIONS_PER_ROUND);
+  currentQuestion = 0;
+  score = 0;
+  attempted = false;
 }
 
 function showCategories(){
-    document.getElementById('startScreen').classList.add('hidden'); 
-    document.getElementById('resultsScreen').classList.add('hidden'); 
-    document.getElementById('categoryScreen').classList.remove('hidden');
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('resultsScreen').classList.add('hidden');
+  document.getElementById('categoryScreen').classList.remove('hidden');
 }
 
+/* NON-VR start */
 function startGame(cat){
-    currentCategory = cat; 
-    score = 0; 
-    currentQuestion = 0; 
-    document.getElementById('categoryScreen').classList.add('hidden'); 
-    document.getElementById('gameScreen').classList.remove('hidden'); 
-    loadQuestion();
+  currentCategory = cat;
+  prepareRound(cat);
+  document.getElementById('categoryScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  loadQuestion();
 }
 
 function loadQuestion(){
-    if(currentQuestion >= 10){
-        showResults(); 
-        return;
-    }
-    
-    attempted = false; 
-    const categoryQuestions = questions[currentCategory]; 
-    const randomQ = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
-    
-    document.getElementById('question').textContent = randomQ.q;
-    document.getElementById('progress').textContent = `Question ${currentQuestion+1}/10`;
-    document.getElementById('score').textContent = `Score: ${score}`;
-    
-    const answersDiv = document.getElementById('answers'); 
-    answersDiv.innerHTML = '';
-    
-    randomQ.a.forEach((answer, index) => {
-        const btn = document.createElement('button');
-        btn.className = 'answer-btn'; 
-        btn.textContent = answer;
-        btn.onclick = () => {
-            if(index === randomQ.c){
-                btn.classList.add('correct'); 
-                if(!attempted){
-                    score += 10; 
-                    document.getElementById('score').textContent = `Score: ${score}`;
-                } 
-                setTimeout(() => {
-                    currentQuestion++; 
-                    loadQuestion();
-                }, 1000);
-            } else {
-                btn.classList.add('incorrect'); 
-                attempted = true; 
-                setTimeout(() => {
-                    btn.classList.remove('incorrect');
-                }, 500);
-            }
-        };
-        answersDiv.appendChild(btn);
-    });
+  document.getElementById('feedback').textContent = '';
+  if(currentQuestion >= QUESTIONS_PER_ROUND){
+    showResults();
+    return;
+  }
+  attempted = false;
+  const q = shuffledQuestions[currentQuestion];
+  document.getElementById('question').textContent = q.q;
+  document.getElementById('progress').textContent = `Question ${currentQuestion + 1}/${QUESTIONS_PER_ROUND}`;
+  document.getElementById('score').textContent = `Score: ${score}`;
+  const answersDiv = document.getElementById('answers'); answersDiv.innerHTML = '';
+  q.a.forEach((answer, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.textContent = answer;
+    btn.onclick = () => {
+      if(idx === q.c){
+        btn.classList.add('correct');
+        if(!attempted){
+          score += 10;
+          document.getElementById('score').textContent = `Score: ${score}`;
+        }
+        setTimeout(() => {
+          currentQuestion++;
+          loadQuestion();
+        }, 800);
+      } else {
+        // show just "Incorrect" as requested
+        document.getElementById('feedback').textContent = 'Incorrect';
+        btn.classList.add('incorrect');
+        attempted = true;
+        // remove incorrect class after a short time to allow retry
+        setTimeout(() => { btn.classList.remove('incorrect'); }, 600);
+      }
+    };
+    answersDiv.appendChild(btn);
+  });
 }
 
+/* NON-VR show results */
 function showResults(){
-    document.getElementById('gameScreen').classList.add('hidden'); 
-    document.getElementById('finalScore').textContent = `Final Score: ${score}/100`; 
-    document.getElementById('resultsScreen').classList.remove('hidden');
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('finalScore').textContent = `Final Score: ${score}/${QUESTIONS_PER_ROUND * 10}`;
+  document.getElementById('resultsScreen').classList.remove('hidden');
 }
 
+/* -------------------------
+   VR Game functions
+   ------------------------- */
+function startVRGame(category){
+  currentCategory = category;
+  prepareRound(category);
+  currentVRScreen = 'game';
+  updateVRUI();
+}
+
+function checkVRAnswer(selectedIndex, correctIndex){
+  // show feedback in VR by updating the top panel or toggling results
+  if(selectedIndex === correctIndex){
+    if(!attempted) score += 10;
+    setTimeout(() => {
+      currentQuestion++;
+      attempted = false;
+      if(currentQuestion >= QUESTIONS_PER_ROUND){
+        currentVRScreen = 'results';
+      }
+      updateVRUI();
+    }, 700);
+  } else {
+    attempted = true;
+    // briefly create a tiny "Incorrect" panel below
+    createTemporaryVRFeedback('Incorrect', 1.2);
+  }
+}
+
+function createTemporaryVRFeedback(text, durationSec = 0.9){
+  // small panel below showing the text then removed
+  const feedback = createVRPanel(text, 0, -1.6, 2.6, 0.35, '#001a40', '#ffcc66', 48);
+  setTimeout(() => {
+    vrUIGroup.remove(feedback);
+  }, durationSec * 1000);
+}
+
+/* -------------------------
+   VR BUTTON / SESSION SETUP
+   ------------------------- */
+function setupVRButton(){
+  const vrButton = document.getElementById('vrButton');
+  if('xr' in navigator){
+    navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+      if(!supported){
+        vrButton.textContent = 'VR Not Supported';
+        vrButton.disabled = true;
+      }
+    });
+  } else {
+    vrButton.textContent = 'VR Not Available';
+    vrButton.disabled = true;
+  }
+}
+
+function toggleVR(){
+  const vrButton = document.getElementById('vrButton');
+  if(!isVRMode){
+    vrButton.textContent = 'Exit VR Mode';
+    vrButton.classList.add('vr-active');
+    if('xr' in navigator){
+      navigator.xr.requestSession('immersive-vr', {
+        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+      }).then((session) => {
+        renderer.xr.setSession(session);
+        isVRMode = true;
+        document.getElementById('ui').style.display = 'none';
+
+        session.addEventListener('end', () => {
+          isVRMode = false;
+          vrButton.textContent = 'Enter VR Mode';
+          vrButton.classList.remove('vr-active');
+          document.getElementById('ui').style.display = 'block';
+        });
+      }).catch((err) => {
+        console.error('VR Error:', err);
+        vrButton.textContent = 'Enter VR Mode';
+        vrButton.classList.remove('vr-active');
+        alert('Failed to enter VR mode');
+      });
+    }
+  } else {
+    const session = renderer.xr.getSession();
+    if(session) session.end();
+  }
+}
+
+/* -------------------------
+   ANIMATION LOOP
+   ------------------------- */
+function animate(){
+  renderer.setAnimationLoop(() => {
+    if(!isVRMode){
+      // subtle camera drift for non-VR
+      camera.position.x = Math.sin(Date.now() * 0.00012) * 6;
+      camera.lookAt(0, 5, 0);
+    } else {
+      checkVRInteraction();
+    }
+
+    // animate particles
+    const particles = scene.children.find(c => c instanceof THREE.Points);
+    if(particles){
+      const positions = particles.geometry.attributes.position.array;
+      for(let i=1; i<positions.length; i+=3){
+        positions[i] -= 0.25;
+        if(positions[i] < 0) positions[i] = 60;
+      }
+      particles.geometry.attributes.position.needsUpdate = true;
+    }
+
+    renderer.render(scene, camera);
+  });
+}
+
+/* -------------------------
+   WINDOW RESIZE
+   ------------------------- */
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight; 
-    camera.updateProjectionMatrix(); 
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+/* -------------------------
+   START
+   ------------------------- */
 initScene();
+
 </script>
 </body>
 </html>
