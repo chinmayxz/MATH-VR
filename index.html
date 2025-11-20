@@ -588,6 +588,9 @@ function loadQuestion(){
         if(!attempted){
           score += 10;
           document.getElementById('score').textContent = `Score: ${score}`;
+          document.getElementById('feedback').textContent = 'CORRECT';
+        btn.classList.add('CORRECT');
+        attempted = true;
         }
         setTimeout(() => {
           currentQuestion++;
